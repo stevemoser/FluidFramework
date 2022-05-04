@@ -12,7 +12,6 @@ import { TraitLocation, TreeView, TreeViewRange } from '../../TreeView';
 import { Definition, DetachedSequenceId, NodeId, TraitLabel } from '../../Identifiers';
 import { fail } from '../../Common';
 import { rangeFromStableRange } from '../../TreeViewUtilities';
-import { makeRandom } from '../utilities/TestUtilities';
 import {
 	AcceptanceCondition,
 	AsyncGenerator,
