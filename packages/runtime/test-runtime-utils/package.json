@@ -71,6 +71,7 @@
     "@fluidframework/runtime-utils": "^0.60.1000",
     "@fluidframework/telemetry-utils": "^0.60.1000",
     "axios": "^0.26.0",
+    "jsrsasign": "^10.2.0",
     "uuid": "^8.3.1"
   },
   "devDependencies": {
