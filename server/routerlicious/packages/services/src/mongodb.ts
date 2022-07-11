@@ -77,9 +77,13 @@ export class MongoCollection<T> implements core.ICollection<T> {
         await this.collection.insertMany(values, { ordered: false });
     }
 
-    public async createIndex(index: any, unique: boolean): Promise<void> {
+    public async createIndex(index: any, unique: boolean, partialFilterExpression?: any): Promise<void> {
         try {
-            const indexName = await this.collection.createIndex(index, { unique });
+            const option: any = { unique };
+            if (partialFilterExpression) {
+                option.partialFilterExpression = partialFilterExpression;
+            }
+            const indexName = await this.collection.createIndex(index, option);
             Lumberjack.info(`Created index ${indexName}`);
         } catch (error) {
             Lumberjack.error(`Index creation failed`, error);

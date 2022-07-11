@@ -190,6 +190,14 @@ export class AlfredResourcesFactory implements core.IResourcesFactory<AlfredReso
                 tenantId: 1,
             },
             true);
+        // eslint-disable-next-line max-len
+        // As specified in https://docs.microsoft.com/en-us/azure/cosmos-db/mongodb/mongodb-indexing#compound-indexes-mongodb-server-version-36
+        // In the API for MongoDB, compound indexes are required if your query needs the ability to sort on multiple
+        // fields at once. For queries with multiple filters that don't need to sort, create multiple single field
+        // indexes instead of a compound index to save on indexing costs.
+        await documentsCollection.createIndex({ documentId: 1 }, true);
+        await documentsCollection.createIndex({ tenantId: 1 }, false);
+
         const deltasCollectionName = config.get("mongo:collectionNames:deltas");
         const scribeCollectionName = config.get("mongo:collectionNames:scribeDeltas");
 

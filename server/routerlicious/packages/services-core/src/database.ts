@@ -135,7 +135,7 @@ export interface ICollection<T> {
 
     distinct(key: any, query: any): Promise<any>;
 
-    createIndex(index: any, unique: boolean): Promise<void>;
+    createIndex(index: any, unique: boolean, partialFilterExpression?: any): Promise<void>;
 
     createTTLIndex?(index: any, mongoExpireAfterSeconds?: number): Promise<void>;
 }

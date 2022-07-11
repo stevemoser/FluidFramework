@@ -79,6 +79,7 @@ export class DeliLambdaFactory extends EventEmitter implements IPartitionLambdaF
         let gitManager: IGitManager;
         let dbObject: IDocument;
 
+        await this.collection.createIndex({ session: 1 }, false, { $exists: true });
         try {
             const tenant = await this.tenantManager.getTenant(tenantId, documentId);
             gitManager = tenant.gitManager;
