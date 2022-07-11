@@ -5,7 +5,7 @@
 
 import { assert } from "console";
 import * as core from "@fluidframework/server-services-core";
-import { AggregationCursor, Collection, CreateIndexesOptions, MongoClient, MongoClientOptions } from "mongodb";
+import { AggregationCursor, Collection, MongoClient, MongoClientOptions } from "mongodb";
 import { Lumberjack } from "@fluidframework/server-services-telemetry";
 
 const MaxFetchSize = 2000;
@@ -79,10 +79,12 @@ export class MongoCollection<T> implements core.ICollection<T> {
 
     public async createIndex(index: any, unique: boolean, partialFilterExpression?: any): Promise<void> {
         try {
-            const option: CreateIndexesOptions = { unique };
+            const option: any = { unique };
             if (partialFilterExpression) {
                 option.partialFilterExpression = partialFilterExpression;
             }
+
+            // eslint-disable-next-line @typescript-eslint/await-thenable
             const indexName = await this.collection.createIndex(index, option);
             Lumberjack.info(`Created index ${indexName}`);
         } catch (error) {
