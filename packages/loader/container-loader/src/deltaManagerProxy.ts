@@ -80,9 +80,14 @@ export class DeltaManagerProxy
     public readonly inbound: IDeltaQueue<ISequencedDocumentMessage>;
     public readonly outbound: IDeltaQueue<IDocumentMessage[]>;
     public readonly inboundSignal: IDeltaQueue<ISignalMessage>;
+    private readonly isPendLocalState: boolean | undefined;
 
     public get IDeltaSender(): IDeltaSender {
         return this;
+    }
+
+    public get isPendingLocalState(): boolean | undefined {
+        return this.isPendLocalState;
     }
 
     public get minimumSequenceNumber(): number {

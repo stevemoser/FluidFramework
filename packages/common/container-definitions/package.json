@@ -69,6 +69,18 @@
         "forwardCompat": false,
         "backCompat": false
       },
+      "InterfaceDeclaration_IContainer": {
+        "forwardCompat": false,
+        "backCompat": false
+      },
+      "InterfaceDeclaration_IContainerContext": {
+        "forwardCompat": false,
+        "backCompat": false
+      },
+      "InterfaceDeclaration_IDeltaManager": {
+        "forwardCompat": false,
+        "backCompat": false
+      },
       "RemovedTypeAliasDeclaration_ConnectionState.Connecting": {
         "forwardCompat": false,
         "backCompat": false

@@ -235,6 +235,8 @@ export interface IDeltaManager<T, U> extends IEventProvider<IDeltaManagerEvents>
     readonly inbound: IDeltaQueue<T>;
     readonly inboundSignal: IDeltaQueue<ISignalMessage>;
     readonly initialSequenceNumber: number;
+    // (undocumented)
+    readonly isPendingLocalState: boolean | undefined;
     readonly lastKnownSeqNumber: number;
     readonly lastMessage: ISequencedDocumentMessage | undefined;
     readonly lastSequenceNumber: number;
