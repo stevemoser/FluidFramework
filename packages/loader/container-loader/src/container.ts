@@ -1156,6 +1156,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             : { snapshot: undefined, versionId: undefined };
         assert(snapshot !== undefined || pendingLocalState !== undefined, 0x237 /* "Snapshot should exist" */);
 
+        const isPendingLocalState: boolean = pendingLocalState === undefined ? true : false;
         const attributes: IDocumentAttributes = pendingLocalState === undefined
             ? await this.getDocumentAttributes(this.storageService, snapshot)
             : {
@@ -1168,11 +1169,13 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
 
         // Attach op handlers to finish initialization and be able to start processing ops
         // Kick off any ops fetching if required.
+        console.log("loadmode: ", loadMode.opsBeforeReturn);
         switch (loadMode.opsBeforeReturn) {
             case undefined:
                 // Start prefetch, but not set opsBeforeReturnP - boot is not blocked by it!
                 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                this.attachDeltaManagerOpHandler(attributes, loadMode.deltaConnection !== "none" ? "all" : "none");
+                this.attachDeltaManagerOpHandler(attributes, loadMode.deltaConnection !== "none" ? "all" : "none",
+                isPendingLocalState);
                 break;
             case "cached":
                 opsBeforeReturnP = this.attachDeltaManagerOpHandler(attributes, "cached");
@@ -1268,6 +1271,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
             term: 1,
             minimumSequenceNumber: 0,
         };
+        console.log("createDetached?: ");
 
         await this.attachDeltaManagerOpHandler(attributes);
 
@@ -1301,6 +1305,7 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
         this._storage.loadSnapshotForRehydratingContainer(snapshotTree);
         const attributes = await this.getDocumentAttributes(this._storage, snapshotTree);
 
+        console.log("loadmode rehydrate: ");
         await this.attachDeltaManagerOpHandler(attributes);
 
         // Initialize the protocol handler
@@ -1585,7 +1590,9 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
 
     private async attachDeltaManagerOpHandler(
         attributes: IDocumentAttributes,
-        prefetchType?: "cached" | "all" | "none") {
+        prefetchType?: "cached" | "all" | "none",
+        isPendingLocalState?: boolean) {
+        console.log("sequenceNumber: ", attributes.sequenceNumber);
         return this._deltaManager.attachOpHandler(
             attributes.minimumSequenceNumber,
             attributes.sequenceNumber,
@@ -1596,7 +1603,8 @@ export class Container extends EventEmitterWithErrorHandling<IContainerEvents> i
                     this.processSignal(message);
                 },
             },
-            prefetchType);
+            prefetchType,
+            isPendingLocalState);
     }
 
     private logConnectionStateChangeTelemetry(

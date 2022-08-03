@@ -60,6 +60,12 @@
       "RemovedInterfaceDeclaration_IDataStoreWithBindToContext_Deprecated": {
         "forwardCompat": false,
         "backCompat": false
+      },
+      "InterfaceDeclaration_IContainerRuntime": {
+        "forwardCompat": false
+      },
+      "InterfaceDeclaration_IProvideContainerRuntime": {
+        "forwardCompat": false
       }
     }
   }

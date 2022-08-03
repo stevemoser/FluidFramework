@@ -196,6 +196,8 @@ export class MockDeltaManager extends TypedEventEmitter<IDeltaManagerEvents> imp
     // (undocumented)
     initialSequenceNumber: number;
     // (undocumented)
+    get isPendingLocalState(): boolean | undefined;
+    // (undocumented)
     readonly lastKnownSeqNumber = 0;
     // (undocumented)
     lastMessage: ISequencedDocumentMessage | undefined;
