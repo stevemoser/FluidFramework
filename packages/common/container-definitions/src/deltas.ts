@@ -96,6 +96,8 @@ export interface IDeltaManager<T, U> extends IEventProvider<IDeltaManagerEvents>
     /** The last sequence number processed by the delta manager */
     readonly lastSequenceNumber: number;
 
+    readonly isPendingLocalState: boolean | undefined;
+
     /** The last message processed by the delta manager */
     readonly lastMessage: ISequencedDocumentMessage | undefined;
 

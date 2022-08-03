@@ -104,6 +104,7 @@ export class DeltaManager<TConnectionManager extends IConnectionManager>
     private lastProcessedSequenceNumber: number = 0;
     private lastProcessedMessage: ISequencedDocumentMessage | undefined;
     private baseTerm: number = 0;
+    private isPendLocalState: boolean | undefined;
 
     /**
      * Track down the ops size.
@@ -165,6 +166,10 @@ export class DeltaManager<TConnectionManager extends IConnectionManager>
 
     public get minimumSequenceNumber(): number {
         return this.minSequenceNumber;
+    }
+
+    public get isPendingLocalState(): boolean | undefined {
+        return this.isPendLocalState;
     }
 
     /**
@@ -380,6 +385,7 @@ export class DeltaManager<TConnectionManager extends IConnectionManager>
         term: number,
         handler: IDeltaHandlerStrategy,
         prefetchType: "cached" | "all" | "none" = "none",
+        isPendingLocalState?: boolean,
     ) {
         this.initSequenceNumber = sequenceNumber;
         this.lastProcessedSequenceNumber = sequenceNumber;
@@ -387,7 +393,7 @@ export class DeltaManager<TConnectionManager extends IConnectionManager>
         this.minSequenceNumber = minSequenceNumber;
         this.lastQueuedSequenceNumber = sequenceNumber;
         this.lastObservedSeqNumber = sequenceNumber;
-
+        this.isPendLocalState = isPendingLocalState;
         // We will use same check in other places to make sure all the seq number above are set properly.
         assert(this.handler === undefined, 0x0e2 /* "DeltaManager already has attached op handler!" */);
         this.handler = handler;

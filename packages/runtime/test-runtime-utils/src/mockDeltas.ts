@@ -105,6 +105,7 @@ export class MockDeltaManager extends TypedEventEmitter<IDeltaManagerEvents>
     private readonly _inbound: MockDeltaQueue<ISequencedDocumentMessage> = undefined as any;
     private readonly _inboundSignal: MockDeltaQueue<ISignalMessage> = undefined as any;
     private readonly _outbound: MockDeltaQueue<IDocumentMessage[]> = undefined as any;
+    private readonly isPendLocalState: boolean | undefined;
 
     public get inbound(): MockDeltaQueue<ISequencedDocumentMessage> {
         return this._inbound;
@@ -117,6 +118,11 @@ export class MockDeltaManager extends TypedEventEmitter<IDeltaManagerEvents>
     public get inboundSignal(): MockDeltaQueue<ISignalMessage> {
         return this._inboundSignal;
     }
+
+    public get isPendingLocalState(): boolean | undefined {
+        return this.isPendLocalState;
+    }
+
     public minimumSequenceNumber = 0;
 
     public lastSequenceNumber = 0;

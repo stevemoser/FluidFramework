@@ -358,6 +358,9 @@ export class SummaryCollection extends TypedEventEmitter<ISummaryCollectionOpEve
     private handleSummaryAck(op: ISummaryAckMessage) {
         const seq = op.contents.summaryProposal.summarySequenceNumber;
         const summary = this.pendingSummaries.get(seq);
+        console.log("Summary Collection");
+        console.log("seq: ", seq, "initialSequenceNumber: ", this.deltaManager.initialSequenceNumber,
+        "summary.clientSequenceNumber: ", summary?.clientSequenceNumber);
         if (!summary || summary.summaryOp === undefined) {
             // Summary ack without an op should be rare. We could fetch the
             // reference sequence number from the snapshot, but instead we
@@ -366,7 +369,10 @@ export class SummaryCollection extends TypedEventEmitter<ISummaryCollectionOpEve
             // from. i.e. initialSequenceNumber > summarySequenceNumber.
             // We really don't care about it for now, since it is older than
             // the one we loaded from.
-            if (seq >= this.deltaManager.initialSequenceNumber) {
+        console.log("                NO summary");
+            // it means the acknoledge is from after the initial point to consider
+                if (seq >= this.deltaManager.initialSequenceNumber && this.deltaManager.isPendingLocalState) {
+                console.log("            seq >= initialSequenceNumber");
                 // Potential causes for it to be later than our initialSequenceNumber
                 // are that the summaryOp was nacked then acked, double-acked, or
                 // the summarySequenceNumber is incorrect.
