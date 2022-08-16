@@ -4,6 +4,8 @@
  */
 
 import http from "http";
+import * as path from "path";
+import Axios from "axios";
 import { TestDriverTypes } from "@fluidframework/test-driver-definitions";
 import { unreachableCase } from "@fluidframework/common-utils";
 import { LocalServerTestDriver } from "./localServerTestDriver";
@@ -26,42 +28,26 @@ export const DriverApi: DriverApiType = {
     RouterliciousDriverApi,
 };
 
-let httpRequestPatched = false;
-function patchHttpRequestToForceKeepAlive() {
-    // Each TCP connection port has a delay to disallow it to be reused after close,
-    // and unit test make a lot of connection, which might cause port exhaustion.
-    // Patch http.request to force keep-alive.
+let httpAgent: http.Agent | undefined;
+function setKeepAlive(api: RouterliciousDriverApiType) {
+    // Each TCP connect has a delay to disallow it to be reused after close, and unit test make a lot of connection,
+    // which might cause port exhaustion.
 
-    if (httpRequestPatched) { return; }
+    // For drivers that use Axios (t9s and r11s), keep the TCP connection open so that they can be reused
+    // TODO: no solution for node-fetch used by ODSP driver.
+    // TODO: currently the driver use a global setting.  Might want to make this encapsulated.
 
-    httpRequestPatched = true;
+    // create the keepAlive httpAgent only once
+    if (httpAgent === undefined) {
+        httpAgent = new http.Agent({ keepAlive: true });
+    }
 
-    const httpAgent = new http.Agent({ keepAlive: true, scheduling: "fifo" });
-    const oldRequest = http.request;
-    http.request = ((url, options, callback) => {
-        // There are two variant of the API
-        // - http.request(options[, callback])
-        // - http.request(url[, options][, callback])
-        // See https://nodejs.org/dist/latest-v18.x/docs/api/http.html#httprequestoptions-callback
-
-        // decide which param is the actual options object and add agent to it.
-        let opts;
-        if (options !== undefined) {
-            opts = typeof options !== "function" ? options : url;
-        } else if (callback !== undefined) {
-            // eslint-disable-next-line no-param-reassign
-            options = {};
-            opts = options;
-        } else {
-            opts = url;
-        }
-        if (opts.agent === undefined) {
-            opts.agent = httpAgent;
-            opts.headers.Connection = ["keep-alive"];
-        }
-        // pass thru the param to the original function
-        return oldRequest(url, options, callback);
-    }) as any;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const axios = api.modulePath === "" ? Axios : require(path.join(api.modulePath, "node_modules", "axios"));
+    // Don't override it if there is already one
+    if (axios.defaults.httpAgent === undefined) {
+        axios.defaults.httpAgent = httpAgent;
+    }
 }
 
 export type CreateFromEnvConfigParam<T extends (config: any, ...args: any) => any> =
@@ -83,16 +69,15 @@ export async function createFluidTestDriver(
 
         case "t9s":
         case "tinylicious":
-            patchHttpRequestToForceKeepAlive();
+            setKeepAlive(api.RouterliciousDriverApi);
             return new TinyliciousTestDriver(api.RouterliciousDriverApi);
 
         case "r11s":
         case "routerlicious":
-            patchHttpRequestToForceKeepAlive();
+            setKeepAlive(api.RouterliciousDriverApi);
             return RouterliciousTestDriver.createFromEnv(config?.r11s, api.RouterliciousDriverApi);
 
         case "odsp":
-            patchHttpRequestToForceKeepAlive();
             return OdspTestDriver.createFromEnv(config?.odsp, api.OdspDriverApi);
 
         default:
