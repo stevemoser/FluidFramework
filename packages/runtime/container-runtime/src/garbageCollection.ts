@@ -365,9 +365,9 @@ export class GarbageCollector implements IGarbageCollector {
     private readonly gcEnabled: boolean;
     /**
      * Tracks if sweep phase is enabled for this document. This is specified during document creation and doesn't change
-     * throughout its lifetime.
+     * throughout its lifetime - UNLESS the e-brake is pulled to block GC for this document due to an error.
      */
-    private readonly sweepEnabled: boolean;
+    private sweepEnabled: boolean;
 
     /**
      * Tracks if GC should run or not. Even if GC is enabled for a document (see gcEnabled), it can be explicitly
@@ -585,6 +585,9 @@ export class GarbageCollector implements IGarbageCollector {
             const gcTreePresent = baseSnapshot?.trees[gcTreeKey] !== undefined;
             this.initialStateNeedsReset = gcTreePresent !== this.shouldRunGC;
         }
+
+        // If any client uses an inactive object, pull the e-brake (on all clients, but only the Summarizer matters)
+        this.runtime.debugBus?.on("inactiveObjectUsed", () => { this.pullEBrake(); });
 
         // Get the GC state from the GC blob in the base snapshot. Use LazyPromise because we only want to do
         // this once since it involves fetching blobs from storage which is expensive.
@@ -834,6 +837,19 @@ export class GarbageCollector implements IGarbageCollector {
         await this.logUnreferencedEvents(logger);
 
         return gcStats;
+    }
+
+    /**
+     * If we encounter an error (e.g. InactiveObject used, or a mismatch in timers used across sessions)
+     * then we should not run GC for this document anymore.  This ability to disable GC is called the E-Brake
+     */
+    public pullEBrake() {
+        if (this.isSummarizerClient && this.sweepEnabled) {
+            this.mc.logger.sendTelemetryEvent({
+                eventName: "GCEBrakeDisablingSweep",
+            });
+        }
+        this.sweepEnabled = false;
     }
 
     /**
