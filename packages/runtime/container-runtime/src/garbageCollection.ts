@@ -848,6 +848,7 @@ export class GarbageCollector implements IGarbageCollector {
             this.mc.logger.sendTelemetryEvent({
                 eventName: "GCEBrakeDisablingSweep",
             });
+            this.debugBus?.emit("ebrakePulled");
         }
         this.sweepEnabled = false;
     }
