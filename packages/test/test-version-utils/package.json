@@ -85,7 +85,7 @@
     "@fluidframework/build-common": "^1.0.0",
     "@fluidframework/build-tools": "^0.4.4000",
     "@fluidframework/eslint-config-fluid": "^1.0.0",
-    "@fluidframework/test-version-utils-previous": "npm:@fluidframework/test-version-utils@^1.0.0",
+    "@fluidframework/test-version-utils-previous": "npm:@fluidframework/test-version-utils@2.0.0-internal.1.4.0",
     "@rushstack/eslint-config": "^2.5.1",
     "@types/mocha": "^9.1.1",
     "@types/nock": "^9.3.0",
@@ -106,11 +106,7 @@
     "webpack-cli": "^4.9.2"
   },
   "typeValidation": {
-    "version": "2.0.0",
-    "broken": {
-      "InterfaceDeclaration_ITestDataObject": {
-        "forwardCompat": false
-      }
-    }
+    "version": "2.0.0-internal.1.4.3",
+    "broken": {}
   }
 }
