@@ -136,7 +136,7 @@ export class MongoCollection<T> implements core.ICollection<T>, core.IRetryAble 
             );
             Lumberjack.info(`Created index ${indexName}`);
         } catch (error) {
-            Lumberjack.error(`Index creation failed`, error);
+            Lumberjack.error(`Index creation failed`, undefined, error);
         }
     }
 
@@ -149,7 +149,7 @@ export class MongoCollection<T> implements core.ICollection<T>, core.IRetryAble 
             );
             Lumberjack.info(`Created index ${indexName}`);
         } catch (error) {
-            Lumberjack.error(`Index creation failed`, error);
+            Lumberjack.error(`Index creation failed`, undefined, error);
         }
     }
 
