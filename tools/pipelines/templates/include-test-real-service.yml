@@ -324,6 +324,7 @@ jobs:
           script: |
             if [[ -d ${{ variables.testPackageDir }}/nyc ]]; then
               echo "directory '${{ variables.testPackageDir }}/nyc' exists."
+              cat ${{ variables.testPackageDir }}/package.json
               cd ${{ variables.testPackageDir }}/nyc
               if ! [[ -z "$(ls -A .)" ]]; then
                 curdirfiles=`ls`
