@@ -20,18 +20,6 @@ parameters:
 steps:
 - ${{ if eq(parameters.buildToolsVersionToInstall, 'repo') }}:
   - task: Bash@3
-    name: PrependPath
-    displayName: Prepend build-tools CLI to path
-    inputs:
-      targetType: 'inline'
-      workingDirectory: ${{ parameters.buildDirectory }}
-      script: |
-        # Prepend the cli bin dir to the path. See
-        # <https://docs.microsoft.com/en-us/azure/devops/pipelines/scripts/logging-commands?view=azure-devops&tabs=bash#prependpath-prepend-a-path-to-the--path-environment-variable>
-        # more information.
-        echo "##vso[task.prependpath]$(Build.SourcesDirectory)/build-tools/packages/build-cli/bin"
-
-  - task: Bash@3
     name: InstallBuildTools
     displayName: Install Fluid Build Tools (from repo)
     inputs:
@@ -41,8 +29,23 @@ steps:
         pushd "$(Build.SourcesDirectory)/build-tools"
         npm i -g pnpm
         pnpm i
-        npm run build:compile
         popd
+
+  - task: Bash@3
+    name: PrependPath
+    displayName: Prepend build-tools CLI to path
+    inputs:
+      targetType: 'inline'
+      workingDirectory: ${{ parameters.buildDirectory }}
+      script: |
+        echo "PATH: $(PATH)"
+        which flub
+        # Prepend the cli bin dir to the path. See
+        # <https://docs.microsoft.com/en-us/azure/devops/pipelines/scripts/logging-commands?view=azure-devops&tabs=bash#prependpath-prepend-a-path-to-the--path-environment-variable>
+        # more information.
+        echo "##vso[task.prependpath]$(Build.SourcesDirectory)/build-tools/packages/build-cli/bin"
+        echo "PATH: $(PATH)"
+        which flub
 
 - ${{ if ne(parameters.buildToolsVersionToInstall, 'repo') }}:
   - task: Bash@3
@@ -63,6 +66,7 @@ steps:
     workingDirectory: ${{ parameters.buildDirectory }}
     script: |
       # Output the help and full command list for debugging purposes
+      which flub
       flub --help
       flub commands
 
@@ -108,6 +112,7 @@ steps:
         echo SETVERSION_VERSION=$SETVERSION_VERSION
         echo SETVERSION_CODEVERSION=$SETVERSION_CODEVERSION
         echo RELEASE_GROUP=$RELEASE_GROUP
+        echo flub location=$(which flub)
         echo command="flub bump $RELEASE_GROUP --exact $(SetVersion.version) -xv"
 
         if [ -f "lerna.json" ]; then
