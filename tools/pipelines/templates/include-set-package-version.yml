@@ -39,16 +39,10 @@ steps:
       workingDirectory: ${{ parameters.buildDirectory }}
       script: |
         echo "PATH: $(PATH)"
-        # Prepend the cli bin dir to the path. See
-        # <https://docs.microsoft.com/en-us/azure/devops/pipelines/scripts/logging-commands?view=azure-devops&tabs=bash#prependpath-prepend-a-path-to-the--path-environment-variable>
-        # more information.
-        # echo "##vso[task.prependpath]$(Build.SourcesDirectory)/build-tools/packages/build-cli/bin"
         pushd "$(Build.SourcesDirectory)/build-tools/packages/build-cli"
         pnpm link --global
         popd
         echo "flub location=$(which flub)"
-        flub --help
-        flub commands
 
 - ${{ if ne(parameters.buildToolsVersionToInstall, 'repo') }}:
   - task: Bash@3
