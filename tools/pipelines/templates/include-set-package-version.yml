@@ -44,7 +44,7 @@ steps:
         # more information.
         echo "##vso[task.prependpath]$(Build.SourcesDirectory)/build-tools/packages/build-cli/bin"
         echo "PATH: $(PATH)"
-        pnpm link --global "$(Build.SourcesDirectory)/build-tools/packages/build-cli"
+        # pnpm link --global "$(Build.SourcesDirectory)/build-tools/packages/build-cli"
 
 - ${{ if ne(parameters.buildToolsVersionToInstall, 'repo') }}:
   - task: Bash@3
@@ -54,6 +54,7 @@ steps:
       targetType: 'inline'
       workingDirectory: ${{ parameters.buildDirectory }}
       script: |
+        echo "PATH=$(PATH)"
         echo "${{ parameters.buildToolsVersionToInstall }}"
         npm install --global "@fluid-tools/build-cli@${{ parameters.buildToolsVersionToInstall }}"
 
@@ -65,7 +66,8 @@ steps:
     workingDirectory: ${{ parameters.buildDirectory }}
     script: |
       # Output the help and full command list for debugging purposes
-      which flub
+      echo flub location=$(which flub)
+      echo "PATH=$(PATH)"
       flub --help
       flub commands
 
