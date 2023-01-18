@@ -45,8 +45,10 @@ steps:
         # echo "##vso[task.prependpath]$(Build.SourcesDirectory)/build-tools/packages/build-cli/bin"
         pushd "$(Build.SourcesDirectory)/build-tools/packages/build-cli"
         pnpm link --global
-        which flub
         popd
+        echo "flub location=$(which flub)"
+        flub --help
+        flub commands
 
 - ${{ if ne(parameters.buildToolsVersionToInstall, 'repo') }}:
   - task: Bash@3
@@ -68,7 +70,7 @@ steps:
     workingDirectory: ${{ parameters.buildDirectory }}
     script: |
       # Output the help and full command list for debugging purposes
-      echo flub location=$(which flub)
+      echo "flub location=$(which flub)"
       echo "PATH=$(PATH)"
       flub --help
       flub commands
