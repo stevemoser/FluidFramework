@@ -7,7 +7,7 @@ import { strict as assert } from "assert";
 import { Container } from "@fluidframework/container-loader";
 import { ContainerRuntime } from "@fluidframework/container-runtime";
 import { IFluidHandle } from "@fluidframework/core-interfaces";
-import { IDirectoryValueChanged, ISharedDirectory, ISharedMap, SharedDirectory, SharedMap } from "@fluidframework/map";
+import { IDirectory, IDirectoryValueChanged, ISharedDirectory, ISharedMap, SharedDirectory, SharedMap } from "@fluidframework/map";
 import { requestFluidObject } from "@fluidframework/runtime-utils";
 import { ConfigTypes, IConfigProviderBase } from "@fluidframework/telemetry-utils";
 import {
@@ -235,7 +235,7 @@ describeFullCompat("SharedDirectory", (getTestObjectProvider) => {
                 expectAllAfterValues("testKey2", "/", "value2.2");
             });
 
-            it("set/delete", async () => {
+            it("set/delete", async function() {
                 // delete after set
                 sharedDirectory1.set("testKey3", "value3.1");
                 sharedDirectory2.set("testKey3", "value3.2");
@@ -247,7 +247,7 @@ describeFullCompat("SharedDirectory", (getTestObjectProvider) => {
 
                 expectAllBeforeValues("testKey3", "/", "value3.1", "value3.2", undefined);
 
-                await provider.ensureSynchronized();
+                await provider.ensureSynchronized(this.timeout() / 3);
 
                 expectAllAfterValues("testKey3", "/", undefined);
             });
@@ -499,7 +499,7 @@ describeFullCompat("SharedDirectory", (getTestObjectProvider) => {
                 expectAllAfterValues("testKey2", "/testSubDir", "value2.2");
             });
 
-            it("set/delete", async () => {
+            it("set/delete", async function() {
                 // delete after set
                 root1SubDir.set("testKey3", "value3.1");
                 root2SubDir.set("testKey3", "value3.2");
@@ -511,7 +511,7 @@ describeFullCompat("SharedDirectory", (getTestObjectProvider) => {
 
                 expectAllBeforeValues("testKey3", "/testSubDir", "value3.1", "value3.2", undefined);
 
-                await provider.ensureSynchronized();
+                await provider.ensureSynchronized(this.timeout() / 3);
 
                 expectAllAfterValues("testKey3", "/testSubDir", undefined);
             });
@@ -570,13 +570,13 @@ describeFullCompat("SharedDirectory", (getTestObjectProvider) => {
             });
         });
 
-        it("Only creates a subdirectory once when simultaneously created", async () => {
+        it("Only creates a subdirectory once when simultaneously created", async function() {
             const root1SubDir = sharedDirectory1.createSubDirectory("testSubDir");
             root1SubDir.set("testKey", "testValue");
             const root2SubDir = sharedDirectory2.createSubDirectory("testSubDir");
             root2SubDir.set("testKey2", "testValue2");
 
-            await provider.ensureSynchronized();
+            await provider.ensureSynchronized(this.timeout() / 2);
 
             assert.strictEqual(sharedDirectory1.getSubDirectory("testSubDir"), root1SubDir,
                 "Created two separate subdirectories in root1");
@@ -594,12 +594,15 @@ describeFullCompat("SharedDirectory", (getTestObjectProvider) => {
              * https://github.com/microsoft/FluidFramework/issues/2400
              *
              * - A SharedDirectory in local state performs a set or directory operation.
+             *
              * - A second SharedDirectory is then created from the summary of the first one.
+             *
              * - The second SharedDirectory performs the same operation as the first one but with a different value.
+             *
              * - The expected behavior is that the first SharedDirectory updates the key with the new value. But in the
-             *   bug, the first SharedDirectory stores the key in its pending state even though it does not send out an
-             *   an op. So when it gets a remote op with the same key, it ignores it as it has a pending op with the
-             *   same key.
+             * bug, the first SharedDirectory stores the key in its pending state even though it does not send out an
+             * an op. So when it gets a remote op with the same key, it ignores it as it has a pending op with the
+             * same key.
              */
 
             it("can process set in local state", async () => {
@@ -715,6 +718,8 @@ describeNoCompat("SharedDirectory orderSequentially", (getTestObjectProvider) =>
     let changedEventData: IDirectoryValueChanged[];
     let subDirCreatedEventData: string[];
     let subDirDeletedEventData: string[];
+    let undisposedEventData: string[];
+    let disposedEventData: string[];
 
     const configProvider = ((settings: Record<string, ConfigTypes>): IConfigProviderBase => ({
         getRawConfig: (name: string): ConfigTypes => settings[name],
@@ -736,6 +741,8 @@ describeNoCompat("SharedDirectory orderSequentially", (getTestObjectProvider) =>
         changedEventData = [];
         subDirCreatedEventData = [];
         subDirDeletedEventData = [];
+        undisposedEventData = [];
+        disposedEventData = [];
         sharedDir.on("valueChanged", (changed, _local, _target) => {
             changedEventData.push(changed);
         });
@@ -892,7 +899,13 @@ describeNoCompat("SharedDirectory orderSequentially", (getTestObjectProvider) =>
 
     it("Should not rollback creating existing subdirectory", () => {
         let error: Error | undefined;
-        sharedDir.createSubDirectory("subDirName");
+        const subDir = sharedDir.createSubDirectory("subDirName");
+        subDir.on("undisposed", (value: IDirectory) => {
+            undisposedEventData.push(value.absolutePath);
+        });
+        subDir.on("disposed", (value: IDirectory) => {
+            disposedEventData.push(value.absolutePath);
+        });
         try {
             containerRuntime.orderSequentially(() => {
                 sharedDir.createSubDirectory("subDirName");
@@ -911,6 +924,9 @@ describeNoCompat("SharedDirectory orderSequentially", (getTestObjectProvider) =>
         assert.equal(subDirCreatedEventData[0], "subDirName");
         // rollback
         assert.equal(subDirDeletedEventData.length, 0);
+        // ensure that dispose/undispose aren't fired
+        assert.equal(undisposedEventData.length, 0);
+        assert.equal(disposedEventData.length, 0);
     });
 
     it("Should rollback created subdirectory with content", () => {
@@ -948,7 +964,13 @@ describeNoCompat("SharedDirectory orderSequentially", (getTestObjectProvider) =>
 
     it("Should rollback deleted subdirectory", () => {
         let error: Error | undefined;
-        sharedDir.createSubDirectory("subDirName");
+        const subDir = sharedDir.createSubDirectory("subDirName");
+        subDir.on("undisposed", (value: IDirectory) => {
+            undisposedEventData.push(value.absolutePath);
+        });
+        subDir.on("disposed", (value: IDirectory) => {
+            disposedEventData.push(value.absolutePath);
+        });
         try {
             containerRuntime.orderSequentially(() => {
                 sharedDir.deleteSubDirectory("subDirName");
@@ -969,6 +991,9 @@ describeNoCompat("SharedDirectory orderSequentially", (getTestObjectProvider) =>
         assert.equal(subDirDeletedEventData[0], "subDirName");
         // rollback
         assert.equal(subDirCreatedEventData[1], "subDirName");
+        assert.equal(undisposedEventData.length, 1);
+        assert.equal(undisposedEventData[0], "/subDirName");
+        assert.equal(disposedEventData.length, 1);
     });
 
     it("Should not rollback deleting nonexistent subdirectory", () => {
@@ -994,8 +1019,14 @@ describeNoCompat("SharedDirectory orderSequentially", (getTestObjectProvider) =>
     it("Should rollback deleted subdirectory with content", () => {
         let error: Error | undefined;
         const subdir = sharedDir.createSubDirectory("subDirName");
+        subdir.on("undisposed", (value: IDirectory) => {
+            undisposedEventData.push(value.absolutePath);
+        });
+        subdir.on("disposed", (value: IDirectory) => {
+            disposedEventData.push(value.absolutePath);
+        });
         subdir.set("key1", "content1");
-        subdir.createSubDirectory("subSubDirName");
+        const subsubdir = subdir.createSubDirectory("subSubDirName");
         try {
             containerRuntime.orderSequentially(() => {
                 sharedDir.deleteSubDirectory("subDirName");
@@ -1026,6 +1057,9 @@ describeNoCompat("SharedDirectory orderSequentially", (getTestObjectProvider) =>
         assert.equal(subDirDeletedEventData[0], "subDirName");
         // rollback
         assert.equal(subDirCreatedEventData[2], "subDirName");
+        assert.equal(undisposedEventData.length, 1);
+        assert.equal(undisposedEventData[0], "/subDirName");
+        assert.equal(disposedEventData.length, 1);
 
         // verify we still get events on restored content
         readSubdir.set("key2", "content2");

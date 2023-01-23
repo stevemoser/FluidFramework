@@ -3,8 +3,6 @@
  * Licensed under the MIT License.
  */
 
-/* eslint-disable max-len */
-
 import { strict as assert } from "assert";
 import { ContainerErrorType } from "@fluidframework/container-definitions";
 import { isILoggingError, LoggingError, normalizeError } from "@fluidframework/telemetry-utils";
@@ -90,7 +88,24 @@ describe("Errors", () => {
             assert(coercedError.errorType === ContainerErrorType.dataProcessingError);
             assert(coercedError.getTelemetryProperties().dataProcessingError === 1);
             assert(coercedError.getTelemetryProperties().dataProcessingCodepath === "someCodepath");
-            assert(coercedError.getTelemetryProperties().untrustedOrigin === 1);
+            assert(coercedError.getTelemetryProperties().untrustedOrigin === undefined);
+            assert(coercedError.message === "Inherited error message");
+            assert(coercedError.getTelemetryProperties().otherProperty === "Considered PII-free property", "telemetryProps should be copied when wrapping");
+        });
+
+        it("Should coerce Normalized LoggingError with errorType", () => {
+            const originalError = new LoggingError(
+                "Inherited error message", {
+                    otherProperty: "Considered PII-free property",
+                });
+            const normalizedLoggingError = normalizeError(originalError);
+            const coercedError = DataProcessingError.wrapIfUnrecognized(normalizedLoggingError, "someCodepath", undefined);
+            assert(coercedError as any !== originalError);
+            assert(coercedError instanceof DataProcessingError);
+            assert(coercedError.errorType === ContainerErrorType.dataProcessingError);
+            assert(coercedError.getTelemetryProperties().dataProcessingError === 1);
+            assert(coercedError.getTelemetryProperties().dataProcessingCodepath === "someCodepath");
+            assert(coercedError.getTelemetryProperties().untrustedOrigin === undefined);
             assert(coercedError.message === "Inherited error message");
             assert(coercedError.getTelemetryProperties().otherProperty === "Considered PII-free property", "telemetryProps should be copied when wrapping");
         });

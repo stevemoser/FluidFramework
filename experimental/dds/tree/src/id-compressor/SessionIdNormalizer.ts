@@ -16,6 +16,7 @@ import { SerializedSessionIdNormalizer } from './persisted-types';
  * that normalizeLocalToFinal(locals[i]) === finals[i] and vice versa.
  * Below is an example to illustrate how various mappings can arise:
  *
+ * ```
  *     +- Creation Index
  *    /     +- Locals
  *   /     /    +- Finals
@@ -32,13 +33,16 @@ import { SerializedSessionIdNormalizer } from './persisted-types';
  * 8  |     | 13
  * 9  |     | 14
  * 10 | -11 |     ----- A local ID is allocated. It has no corresponding final ID since it has not been acked.
+ * ```
  *
  * Note that in this example, some IDs (those at indices 2, 3, 4, 6, 8, and 9) have no local form. The ID at index 10 has no final form.
  * These kinds of "gaps" occur due to the timing of allocation calls on the client and how they relate to finalization/cluster creation,
  * which depends on receiving an ack/sequence number from the server. Given this context, "session space" can be thought of as:
  *
- * 		for each index in the range of IDs created by a session:
- * 			the local form if it exists, otherwise the final form
+ * ```
+ * for each index in the range of IDs created by a session:
+ * 	the local form if it exists, otherwise the final form
+ * ```
  *
  * This class is designed to efficiently build and query these mappings by leveraging the facts that much of the range (in both local and
  * final space) is uninterrupted by "gaps" and can be compactly represented by a (first, last) pair and is easily binary searched for
@@ -113,8 +117,8 @@ export class SessionIdNormalizer<TRangeObject> {
 	}
 
 	/**
-	 * Returns the index of the supplied session-space ID in the total range of IDs created by the session, if the ID was created
-	 * by the session for this `SessionIdNormalizer`.
+	 * Returns the index of the local ID corresponding to the supplied final ID in the total range of IDs created by the session,
+	 * if the ID was created by the session for this `SessionIdNormalizer`.
 	 */
 	public getCreationIndex(finalId: FinalCompressedId): number | undefined {
 		const localRange = this.idRanges.getPairOrNextLowerByValue(finalId);
@@ -222,16 +226,17 @@ export class SessionIdNormalizer<TRangeObject> {
 	}
 
 	/**
-	 * Registers a final ID with this normalizer.
-	 * If there are any local IDs at the tip of session-space that do not have a corresponding final, it will be registered (aligned) with
-	 * the first of those. Otherwise, will be registered as the next ID in session space in creation order. An example:
+	 * Registers one or more final IDs with this normalizer.
+	 * If there are any local IDs at the tip of session-space that do not have a corresponding final, they will be registered (aligned)
+	 * starting with the first of those. Otherwise, will be registered as the next ID in session space in creation order.
 	 *
+	 * An example:
 	 * Locals: [-1, -2,  X,  -4]
 	 * Finals: [ 0,  1,  2,   X]
 	 * Calling `addFinalIds` with first === last === 5 results in the following:
 	 * Locals: [-1, -2,  X,  -4]
 	 * Finals: [ 0,  1,  2,   5]
-	 * Calling `addFinalIds` with first === last === 6 results in the following:
+	 * Subsequently calling `addFinalIds` with first === last === 6 results in the following:
 	 * Locals: [-1, -2,  X,  -4,  X]
 	 * Finals: [ 0,  1,  2,   5,  6]
 	 *
@@ -240,7 +245,8 @@ export class SessionIdNormalizer<TRangeObject> {
 	 * non-contiguous final ID without a local form:
 	 * Locals: [-1, -2,  X,  -4,  X]
 	 * Finals: [ 0,  1,  2,   5,  9]
-	 *                            ^final ID 9 is not contiguous and does not have a corresponding local ID
+	 *
+	 * ^final ID 9 is not contiguous and does not have a corresponding local ID
 	 */
 	public addFinalIds(firstFinal: FinalCompressedId, lastFinal: FinalCompressedId, rangeObject: TRangeObject): void {
 		assert(lastFinal >= firstFinal, 'Malformed normalization range.');
@@ -252,18 +258,8 @@ export class SessionIdNormalizer<TRangeObject> {
 			finalRangesObj[1] = [firstFinal, lastFinal, rangeObject];
 			nextLocal = Math.min(this.nextLocalId, firstLocal - (lastFinal - firstFinal) - 1) as LocalCompressedId;
 		} else {
-			const isSingle = isSingleRange(finalRanges);
-			let lastFinalRange: FinalRange<TRangeObject>;
-			let firstAlignedLocal: LocalCompressedId;
-			if (isSingle) {
-				firstAlignedLocal = firstLocal;
-				lastFinalRange = finalRanges;
-			} else {
-				[firstAlignedLocal, lastFinalRange] = finalRanges.last() ?? fail('Map should be non-empty.');
-			}
-
-			const [firstAlignedFinal, lastAlignedFinal] = lastFinalRange;
-			const lastAlignedLocal = firstAlignedLocal - (lastAlignedFinal - firstAlignedFinal);
+			const [firstAlignedLocal, lastAlignedLocal, lastAlignedFinal, lastFinalRange] =
+				this.getAlignmentOfLastRange(firstLocal, finalRanges);
 			nextLocal = Math.min(
 				this.nextLocalId,
 				lastAlignedLocal - (lastFinal - firstFinal) - 2
@@ -273,7 +269,7 @@ export class SessionIdNormalizer<TRangeObject> {
 			} else {
 				const alignedLocal = (lastAlignedLocal - 1) as LocalCompressedId;
 				let rangeMap: FinalRangesMap<TRangeObject>;
-				if (isSingle) {
+				if (isSingleRange(finalRanges)) {
 					// Convert the single range to a range collection
 					rangeMap = SessionIdNormalizer.makeFinalRangesMap();
 					rangeMap.append(firstAlignedLocal, lastFinalRange);
@@ -290,6 +286,70 @@ export class SessionIdNormalizer<TRangeObject> {
 		}
 
 		this.nextLocalId = nextLocal;
+	}
+
+	/**
+	 * Alerts the normalizer to the existence of a block of final IDs that are *allocated* (but may not be entirely used).
+	 *
+	 * The normalizer may have unaligned (unfinalized) local IDs; any such outstanding locals will be eagerly aligned with
+	 * as many finals from the registered block as possible.
+	 *
+	 * It is important to register blocks via this method as soon as they are created for future eager final generations to be utilized, as such
+	 * generation is dependant on the normalizer being up-to-date with which local IDs have been aligned with finals. If, for instance,
+	 * a block of finals is not immediately registered with the normalizer and there are outstanding locals that would have aligned with them,
+	 * those locals will not be finalized until their creation range is finalized, which could be later if the block was created by an earlier
+	 * creation range's finalization but is large enough to span them both. In this scenario, no eager finals can be generated until the second
+	 * creation range is finalized.
+	 *
+	 * A usage example:
+	 * Locals: [-1, -2,  X,  -4, -5, -6]
+	 * Finals: [ 0,  1,  2,   X,  X,  X]
+	 * Calling `registerFinalIdBlock` with firstFinalInBlock === 5 and count === 10 results in the following:
+	 * Locals: [-1, -2,  X,  -4, -5, -6]
+	 * Finals: [ 0,  1,  2,   5,  6,  7]
+	 * Instead calling `registerFinalIdBlock` with firstFinalInBlock === 5 and count === 2 results in the following:
+	 * Locals: [-1, -2,  X,  -4, -5, -6]
+	 * Finals: [ 0,  1,  2,   5,  6,  X]
+	 *
+	 */
+	public registerFinalIdBlock(firstFinalInBlock: FinalCompressedId, count: number, rangeObject: TRangeObject): void {
+		assert(count >= 1, 'Malformed normalization block.');
+		const [firstLocal, [lastLocal, finalRanges]] =
+			this.idRanges.last() ?? fail('Final ID block should not be registered before any locals.');
+		let unalignedLocalCount: number;
+		if (finalRanges === undefined) {
+			unalignedLocalCount = firstLocal - lastLocal + 1;
+		} else {
+			const [_, lastAlignedLocal] = this.getAlignmentOfLastRange(firstLocal, finalRanges);
+			unalignedLocalCount = lastAlignedLocal - lastLocal;
+		}
+		assert(unalignedLocalCount > 0, 'Final ID block should not be registered without an existing local range.');
+		const lastFinal = (firstFinalInBlock + Math.min(unalignedLocalCount, count) - 1) as FinalCompressedId;
+		this.addFinalIds(firstFinalInBlock, lastFinal, rangeObject);
+	}
+
+	private getAlignmentOfLastRange(
+		firstLocal: LocalCompressedId,
+		finalRanges: FinalRanges<TRangeObject>
+	): [
+		firstAlignedLocal: LocalCompressedId,
+		lastAlignedLocal: LocalCompressedId,
+		lastAlignedFinal: FinalCompressedId,
+		lastFinalRange: FinalRange<TRangeObject>
+	] {
+		const isSingle = isSingleRange(finalRanges);
+		let lastFinalRange: FinalRange<TRangeObject>;
+		let firstAlignedLocal: LocalCompressedId;
+		if (isSingle) {
+			firstAlignedLocal = firstLocal;
+			lastFinalRange = finalRanges;
+		} else {
+			[firstAlignedLocal, lastFinalRange] = finalRanges.last() ?? fail('Map should be non-empty.');
+		}
+
+		const [firstAlignedFinal, lastAlignedFinal] = lastFinalRange;
+		const lastAlignedLocal = firstAlignedLocal - (lastAlignedFinal - firstAlignedFinal);
+		return [firstAlignedLocal, lastAlignedLocal as LocalCompressedId, lastAlignedFinal, lastFinalRange];
 	}
 
 	/**

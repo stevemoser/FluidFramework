@@ -9,8 +9,13 @@ import { IContainer } from "@fluidframework/container-definitions";
 import { IConfigProviderBase } from "@fluidframework/telemetry-utils";
 import { ITestObjectProvider } from "@fluidframework/test-utils";
 import { IRandom } from "@fluid-internal/stochastic-test-utils";
-import { ContainerDataObjectManager } from "./containerDataObjectManager";
 
+/**
+ * Responsible for tracking the lifetime of containers
+ * Responsible for retrieving, creating, and loading containers
+ * A container is connected if it is attached and not closed
+ * A container is closed if container.close is true
+ */
 export class ContainerManager {
     private readonly connectedContainers: IContainer[] = [];
     private readonly closedContainers: IContainer[] = [];
@@ -28,14 +33,15 @@ export class ContainerManager {
         return container;
     }
 
-    public async loadContainer(): Promise<void> {
+    public async loadContainer(): Promise<IContainer> {
         const container = await this.provider.loadContainer(this.runtimeFactory, {
             configProvider: this.configProvider,
         });
         this.trackContainer(container);
+        return container;
     }
 
-    private trackContainer(container: IContainer) {
+    private trackContainer(container: IContainer): void {
         container.on("closed", () => {
             const index = this.connectedContainers.indexOf(container);
             assert(index >= 0, "Expected container to have been added to connectedContainers");
@@ -45,7 +51,7 @@ export class ContainerManager {
         this.connectedContainers.push(container);
     }
 
-    public closeRandomContainer(random: IRandom) {
+    public closeRandomContainer(random: IRandom): void {
         assert(this.connectedContainers.length > 0, "Expected there to be connected containers!");
         random.pick(this.connectedContainers).close();
     }
@@ -56,18 +62,5 @@ export class ContainerManager {
 
     public get connectedContainerCount(): number {
         return this.connectedContainers.length;
-    }
-
-    public get disconnectedContainerCount(): number {
-        return this.closedContainers.length;
-    }
-
-    public async getRandomContainer(random: IRandom): Promise<ContainerDataObjectManager> {
-        if (!this.hasConnectedContainers()) {
-            await this.loadContainer();
-        }
-        const container = random.pick(this.connectedContainers);
-        assert(!container.closed, "Picked container should not be closed!");
-        return new ContainerDataObjectManager(container);
     }
 }

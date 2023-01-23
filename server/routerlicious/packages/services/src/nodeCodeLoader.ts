@@ -36,11 +36,9 @@ export class NodeCodeLoader {
     public async load<T>(pkg: any): Promise<T> {
         if (await this.allowList.testSource(pkg)) {
             let packageName = "";
-            if (typeof pkg.package === "string") {
-                packageName = pkg.package;
-            } else {
-                packageName = `${pkg.package.name}@${pkg.package.version}`;
-            }
+            packageName = typeof pkg.package === "string"
+                ? pkg.package
+                : `${pkg.package.name}@${pkg.package.version}`;
             const codeEntrypoint = await this.installOrWaitForPackages(packageName);
             const entry = import(codeEntrypoint);
             // eslint-disable-next-line @typescript-eslint/no-unsafe-return
@@ -52,7 +50,6 @@ export class NodeCodeLoader {
     }
 
     private async installOrWaitForPackages(pkg: string): Promise<string> {
-        // eslint-disable-next-line @typescript-eslint/prefer-regexp-exec
         const dataStores = pkg.match(/(.*)\/(.*)@(.*)/);
         if (!dataStores) {
             return Promise.reject(new Error("Invalid package"));

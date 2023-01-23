@@ -54,6 +54,12 @@ retrieve it.
 A `FluidContainer` object has a `create` function that takes a shared object type (that is, a distributed data structure (DDS) type
 or a Data Object type) and returns a new shared object. But only shared object types that are specified in the schema's `dynamicObjectTypes` array can be dynamically created.
 
+{{< callout note >}}
+
+Data Objects are currently beta and should not be used in production applications.
+
+{{< /callout >}}
+
 Dynamically created objects are local only (in-memory) and cannot be shared with other clients unless a reference to each of them is stored in a connected shared object.
 
 ```js
@@ -139,19 +145,35 @@ Dynamic objects are more difficult to work with than initial objects, but are es
 An example where this is useful is building a collaborative storyboarding application. In this scenario, you can have a large number of individual boards that make up the storyboard. By using a dynamic shared object for each board your code can load the boards on demand as the user accesses them, instead of having to load them all in memory at once.
 
 <!-- AUTO-GENERATED-CONTENT:START (INCLUDE:path=docs/_includes/links.md) -->
+
+<!-- prettier-ignore-start -->
+
+<!-- This section is automatically generated. To update it, make the appropriate changes to docs/md-magic.config.js or the embedded content, then run 'npm run build:md-magic' in the docs folder. -->
 <!-- Links -->
 
 <!-- Concepts -->
 
 [Fluid container]: {{< relref "containers.md" >}}
 
-<!-- Classes and interfaces -->
+<!-- Distributed Data Structures -->
 
-[FluidContainer]: {{< relref "fluidcontainer.md" >}}
-[IFluidContainer]: {{< relref "ifluidcontainer.md" >}}
 [SharedCounter]: {{< relref "/docs/data-structures/counter.md" >}}
 [SharedMap]: {{< relref "/docs/data-structures/map.md" >}}
-[SharedSequence]: {{< relref "sequences.md" >}}
-[SharedString]: {{< relref "string.md" >}}
+[SharedSequence]: {{< relref "/docs/data-structures/sequences.md" >}}
+[SharedString]: {{< relref "/docs/data-structures/string.md" >}}
+
+<!-- API links -->
+
+[fluid-framework]: {{< relref "/docs/apis/fluid-framework.md" >}}
+[@fluidframework/azure-client]: {{< relref "/docs/apis/azure-client.md" >}}
+[@fluidframework/tinylicious-client]: {{< relref "/docs/apis/tinylicious-client.md" >}}
+
+[AzureClient]: {{< relref "/docs/apis/azure-client/AzureClient-class.md" >}}
+[TinyliciousClient]: {{< relref "/docs/apis/tinylicious-client/TinyliciousClient-class.md" >}}
+
+[FluidContainer]: {{< relref "/docs/apis/fluid-static/fluidcontainer-class.md" >}}
+[IFluidContainer]: {{< relref "/docs/apis/fluid-static/ifluidcontainer-interface.md" >}}
+
+<!-- prettier-ignore-end -->
 
 <!-- AUTO-GENERATED-CONTENT:END -->

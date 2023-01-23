@@ -7,31 +7,18 @@ import * as path from "path";
 import * as fs from "fs";
 import Table from "easy-table";
 import { Runner, Suite, Test } from "mocha";
-import { benchmarkTypes, isChildProcess, performanceTestSuiteTag } from "./Configuration";
-import { bold, getArrayStatistics, green, italicize, pad, prettyNumber, red } from "./ReporterUtilities";
+import { isChildProcess } from "./Configuration";
+import {
+    bold,
+    green,
+    italicize,
+    pad,
+    prettyNumber,
+    red,
+    getName,
+    getSuiteName,
+} from "./ReporterUtilities";
 import { MemoryBenchmarkStats } from "./MemoryTestRunner";
-
-const tags = [performanceTestSuiteTag];
-
-for (const tag of benchmarkTypes) {
-    tags.push(`@${tag}`);
-}
-
-/**
- * Strip tags from name.
- */
-const getSuiteName = (suite: Suite): string => getName(suite.fullTitle());
-
-/**
- * Strip tags from name.
- */
-function getName(name: string): string {
-    let s = name;
-    for (const tag of tags) {
-        s = s.replace(tag, "");
-    }
-    return s.trim();
-}
 
 /**
  * Custom mocha reporter for memory tests. It can be used by passing the JavaScript version of this file to
@@ -127,30 +114,34 @@ class MochaMemoryTestReporter {
                     console.log(`\n${bold(suiteName)}`);
 
                     const table = new Table();
+                    const failedTests = new Array<[string, MemoryBenchmarkStats]>();
                     suiteData?.forEach(([testName, testData]) => {
                         if (testData.aborted) {
                             table.cell("status", `${pad(4)}${red("×")}`);
+                            failedTests.push([testName, testData]);
                         } else {
                             table.cell("status", `${pad(4)}${green("✔")}`);
                         }
                         table.cell("name", italicize(testName));
                         if (!testData.aborted) {
-                            const heapUsedArray: number[] = [];
-                            for (let i = 0; i < testData.samples.before.memoryUsage.length; i++) {
-                                heapUsedArray.push(testData.samples.after.memoryUsage[i].heapUsed
-                                                   - testData.samples.before.memoryUsage[i].heapUsed);
-                            }
-                            const heapUsedStats = getArrayStatistics(heapUsedArray);
-                            table.cell("Heap Used Avg", prettyNumber(heapUsedStats.mean, 2), Table.padLeft);
-                            table.cell("Heap Used StdDev", prettyNumber(heapUsedStats.deviation, 2), Table.padLeft);
-                            table.cell("Margin of Error", `±${prettyNumber(heapUsedStats.moe, 2)}`, Table.padLeft);
+                            table.cell("Heap Used Avg", prettyNumber(testData.stats.mean, 2), Table.padLeft);
+                            table.cell("Heap Used StdDev", prettyNumber(testData.stats.deviation, 2), Table.padLeft);
+                            table.cell("Margin of Error", `±${prettyNumber(testData.stats.moe, 2)}`, Table.padLeft);
                             table.cell("Relative Margin of Error",
-                                `±${prettyNumber(heapUsedStats.rme, 2)}%`, Table.padLeft);
-                            table.cell("Samples", testData.runs.toString(), Table.padLeft);
+                                `±${prettyNumber(testData.stats.rme, 2)}%`, Table.padLeft);
+
+                            table.cell("Iterations", testData.runs.toString(), Table.padLeft);
+                            table.cell("Samples used", testData.stats.sample.length.toString(), Table.padLeft);
                         }
                         table.newRow();
                     });
                     console.log(`${table.toString()}`);
+                    if (failedTests.length > 0) {
+                        console.log("------------------------------------------------------", `\n${red("ERRORS:")}`);
+                        failedTests.forEach(([testName, testData]) => {
+                            console.log(`\n${red(testName)}`, "\n", testData.error);
+                        });
+                    }
                     this.writeCompletedBenchmarks(suiteName);
                     this.inProgressSuites.delete(suiteName);
                 }

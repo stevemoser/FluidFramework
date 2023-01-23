@@ -263,9 +263,7 @@ export class OdspTestDriver implements ITestDriver {
                 {
                     type: "browserLogin",
                     navigator: (openUrl) => {
-                        // eslint-disable-next-line max-len
                         console.log(`Open the following url in a new private browser window, and login with user: ${config.username}`);
-                        // eslint-disable-next-line max-len
                         console.log(`Additional account details may be available in the environment variable login__odsp__test__accounts`);
                         console.log(`"${openUrl}"`);
                     },
@@ -301,7 +299,7 @@ export class OdspTestDriver implements ITestDriver {
     /**
      * Returns the url to container which can be used to load the container through loader.
      * @param testId - Filename of the Fluid file. Note: This is not the container id as for odsp
-     *  container id is the hashed id generated using driveId and itemId. Container id is not the filename.
+     * container id is the hashed id generated using driveId and itemId. Container id is not the filename.
      */
     async createContainerUrl(testId: string): Promise<string> {
         if (!this.testIdToUrl.has(testId)) {
@@ -309,7 +307,7 @@ export class OdspTestDriver implements ITestDriver {
             const driveItem = await getDriveItemByRootFileName(
                 this.config.siteUrl,
                 undefined,
-                `/${this.config.directory}/${testId}.fluid`,
+                `/${this.config.directory}/${testId}.tstFluid`,
                 {
                     accessToken: await this.getStorageToken({ siteUrl, refresh: false }),
                     refreshTokenFn: async () => this.getStorageToken({ siteUrl, refresh: false }),
@@ -347,7 +345,7 @@ export class OdspTestDriver implements ITestDriver {
             this.config.siteUrl,
             this.config.driveId,
             this.config.directory,
-            `${testId}.fluid`,
+            `${testId}.tstFluid`,
         );
     }
 

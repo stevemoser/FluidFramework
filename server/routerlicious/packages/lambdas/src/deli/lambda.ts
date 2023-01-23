@@ -17,9 +17,10 @@ import {
     ScopeType,
     ISignalMessage,
     ISummaryAck,
+    ISummaryContent,
     IDocumentMessage,
 } from "@fluidframework/protocol-definitions";
-import { canSummarize, defaultHash, getNextHash } from "@fluidframework/server-services-client";
+import { canSummarize, defaultHash, getNextHash, isNetworkError } from "@fluidframework/server-services-client";
 import {
     ControlMessageType,
     extractBoxcar,
@@ -68,11 +69,12 @@ import {
     createSessionMetric,
     createRoomJoinMessage,
     createRoomLeaveMessage,
+    CheckpointReason,
+    ICheckpoint,
 } from "../utils";
 import { CheckpointContext } from "./checkpointContext";
 import { ClientSequenceNumberManager } from "./clientSeqManager";
 import { IDeliCheckpointManager, ICheckpointParams } from "./checkpointManager";
-import { DeliCheckpointReason } from ".";
 
 enum IncomingMessageOrder {
     Duplicate,
@@ -129,26 +131,6 @@ interface IOpEvent {
     idleTimer?: any;
     maxTimer?: any;
     sequencedMessagesSinceLastOpEvent: number;
-}
-
-/**
- * Used for controlling checkpoint logic
- */
-interface ICheckpoint {
-    currentDeliCheckpointMessage?: IQueuedMessage;
-    currentKafkaCheckpointMessage?: IQueuedMessage;
-
-    // used for ensuring the lambda remains open while clients are connected
-    nextKafkaCheckpointMessage?: IQueuedMessage;
-
-    // time fired due that should kick off a checkpoint when deli is idle
-    idleTimer?: any;
-
-    // raw messages since the last checkpoint
-    rawMessagesSinceCheckpoint: number;
-
-    // time in milliseconds since the last checkpoint
-    lastCheckpointTime: number;
 }
 
 export enum OpEventType {
@@ -339,12 +321,58 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
 
         if (this.serviceConfiguration.deli.opEvent.enable) {
             this.updateOpMaxTimeTimer();
+
+            /**
+             * Deli's opEvent system is supposed to tell us when it's time to post ops for the session.
+             * It sends an "opEvent" event based heuristics like idle / max time / max ops.
+             * There's an edge case though. Suppose the following:
+             * 1. Server A created a deli for the session, consumes 100 kafka messages, and sequences 100 ops.
+             * 2. Within 5 seconds of sequencing those ops,
+             * Server A's deli saves a checkpoint (it remembers it sequenced those 100 ops)
+             * 3. Within a second of that checkpoint, the Kafka partition is rebalanced.
+             * 4. Server B now creates a deli for that session and it consumes those same 100 kafka messages.
+             * 4a. Server B's deli instance is smart enough to detect that those 100 kafka messages were already
+             * processed (due to the checkpoint created in #2) so it ignores them (the first if statement in handler).
+             *
+             * The above flow is a problem because the opEvent logic is not going to trigger since
+             * no messages were sequenced by this deli.
+             *
+             * Deli should be smart and check if it hasn't yet sent an opEvent for messages that
+             * were not durably stored.
+             */
+            if (this.sequenceNumber > this.durableSequenceNumber) {
+                /**
+                 * This makes it so the next time deli checks for a "maxTime" opEvent,
+                 * it will fire the event since sequencedMessagesSinceLastOpEvent \> 0.
+                 */
+                this.opEvent.sequencedMessagesSinceLastOpEvent = this.sequenceNumber - this.durableSequenceNumber;
+            }
         }
 
         this.isNewDocument = this.sequenceNumber === 0;
 
         if (serviceConfiguration.enableLumberjack) {
             this.logSessionStartMetrics();
+        }
+
+        if (this.serviceConfiguration.deli.checkForIdleClientsOnStartup) {
+            /**
+             * Instruct deli to check for idle clients on startup. Why do we want to do this?
+             *
+             * Suppose the following:
+             * 1. Deli starts up and there is 1 write client and it
+             * consumes 1 message it has already previouly consumed.
+             * 2. Deli is closed due to a rebalance 2 minutes later.
+             * 3. Suppose that deli keeps rebalancing every 2 minutes indefinitely.
+             *
+             * Deli is configured to checkpoint 1 message behind the head while there is a client in the session.
+             * This will cause the kafka partition to never get a new checkpoint because it's in this bad loop.
+             * Never checkpointing could eventually lead to messages expiring from Kafka (data loss/corruption).
+             *
+             * We can recover from this loop if we check for idle clients on startup and insert a leave message
+             * for that 1 write client (who is now definitely expired). It would end up making deli checkpoint properly.
+             */
+            this.checkIdleWriteClients(Date.now());
         }
     }
 
@@ -367,6 +395,9 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
 
         let sequencedMessageCount = 0;
 
+        // array of messages that should be produced to the deltas topic after processing
+        const produceToDeltas: ITicketedMessage[] = [];
+
         const boxcar = extractBoxcar(rawMessage);
 
         for (const message of boxcar.contents) {
@@ -384,8 +415,10 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
 
             switch (ticketedMessage.ticketType) {
                 case TicketType.Sequenced: {
-                    // Check for idle write clients.
-                    this.checkIdleWriteClients(ticketedMessage);
+                    if (ticketedMessage.type !== MessageType.ClientLeave) {
+                        // Check for idle write clients.
+                        this.checkIdleWriteClients(ticketedMessage.timestamp);
+                    }
 
                     // Check for document inactivity.
                     if (!(ticketedMessage.type === MessageType.NoClient || ticketedMessage.type === MessageType.Control)
@@ -444,7 +477,11 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
                         operation: sequencedMessage,
                     };
 
-                    this.produceMessage(this.deltasProducer, outgoingMessage);
+                    if (this.serviceConfiguration.deli.maintainBatches) {
+                        produceToDeltas.push(outgoingMessage);
+                    } else {
+                        this.produceMessage(this.deltasProducer, outgoingMessage);
+                    }
 
                     sequencedMessageCount++;
 
@@ -483,7 +520,11 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
                 }
 
                 case TicketType.Nack: {
-                    this.produceMessage(this.deltasProducer, ticketedMessage.message);
+                    if (this.serviceConfiguration.deli.maintainBatches) {
+                        produceToDeltas.push(ticketedMessage.message);
+                    } else {
+                        this.produceMessage(this.deltasProducer, ticketedMessage.message);
+                    }
                     break;
                 }
 
@@ -498,6 +539,12 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
                     // ignore unknown types
                     break;
             }
+        }
+
+        if (produceToDeltas.length > 0) {
+            // processing this boxcar resulted in one or more ticketed messages (sequenced ops or nacks)
+            // produce them in a single boxcar to the deltas topic
+            this.produceMessages(this.deltasProducer, produceToDeltas, rawMessage);
         }
 
         this.checkpointInfo.rawMessagesSinceCheckpoint++;
@@ -590,6 +637,43 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
                 Lumberjack.error(errorMsg, getLumberBaseProperties(this.documentId, this.tenantId), error);
                 this.context.error(error, {
                     restart: true,
+                    tenantId: this.tenantId,
+                    documentId: this.documentId,
+                });
+            });
+    }
+
+    private produceMessages(producer: IProducer, messages: ITicketedMessage[], rawMessage: IQueuedMessage) {
+        this.lastSendP = producer
+            .send(messages, this.tenantId, this.documentId)
+            .catch((error) => {
+                if (this.closed) {
+                    return;
+                }
+
+                const errorMsg = `Could not send ${messages.length} messages to producer. offset: ${rawMessage.offset}`;
+                this.context.log?.error(
+                    `${errorMsg}: ${JSON.stringify(error)}`,
+                    {
+                        messageMetaData: {
+                            documentId: this.documentId,
+                            tenantId: this.tenantId,
+                        },
+                    });
+                Lumberjack.error(errorMsg, getLumberBaseProperties(this.documentId, this.tenantId), error);
+
+                let restart = true;
+                let markAsCorrupt = false;
+
+                if (isNetworkError(error) && error.code === 413) {
+                    // kafka message size too large
+                    restart = false;
+                    markAsCorrupt = true;
+                }
+
+                this.context.error(error, {
+                    restart,
+                    markAsCorrupt: markAsCorrupt ? rawMessage : undefined,
                     tenantId: this.tenantId,
                     documentId: this.documentId,
                 });
@@ -1079,11 +1163,7 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
     }
 
     private isInvalidMessage(message: IRawOperationMessage): boolean {
-        if (message.clientId) {
-            return isServiceMessageType(message.operation.type);
-        } else {
-            return false;
-        }
+        return message.clientId ? isServiceMessageType(message.operation.type) : false;
     }
 
     private createOutputMessage(
@@ -1107,13 +1187,27 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
             timestamp: message.timestamp,
             traces: message.operation.traces,
             type: message.operation.type,
-        };
+            compression: message.operation.compression,
+        } as any;
         if (message.operation.type === MessageType.Summarize || message.operation.type === MessageType.NoClient) {
             const augmentedOutputMessage = outputMessage as ISequencedDocumentAugmentedMessage;
-            if (message.operation.type === MessageType.Summarize ||
-                this.serviceConfiguration.scribe.generateServiceSummary) {
-                // only add additional content if scribe will use this op for generating a summary
-                // NoClient ops are ignored by scribe when generateServiceSummary is disabled
+
+            // only add additional content if scribe will use this op for generating a summary
+            // NoClient ops are ignored by scribe when generateServiceSummary is disabled
+            let addAdditionalContent = false;
+
+            if (this.serviceConfiguration.scribe.generateServiceSummary) {
+                addAdditionalContent = true;
+            } else if (message.operation.type === MessageType.Summarize) {
+                // no need to add additionalContent for summarize messages using the single commit flow
+                // because scribe will not be involved
+                if (!this.serviceConfiguration.deli.skipSummarizeAugmentationForSingleCommmit ||
+                    !(JSON.parse(message.operation.contents) as ISummaryContent).details?.includesProtocolTree) {
+                    addAdditionalContent = true;
+                }
+            }
+
+            if (addAdditionalContent) {
                 const checkpointData = JSON.stringify(this.generateDeliCheckpoint());
                 augmentedOutputMessage.additionalContent = checkpointData;
             }
@@ -1195,13 +1289,11 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
      * Craft and send a leave message if one is found.
      * To prevent recurrent leave message sending, leave messages are only piggybacked with other message type.
      */
-    private checkIdleWriteClients(message: ISequencedDocumentMessageOutput) {
-        if (message.type !== MessageType.ClientLeave) {
-            const idleClient = this.getIdleClient(message.timestamp);
-            if (idleClient?.clientId) {
-                const leaveMessage = this.createLeaveMessage(idleClient.clientId, idleClient.serverMetadata);
-                void this.sendToRawDeltas(leaveMessage);
-            }
+    private checkIdleWriteClients(timestamp: number) {
+        const idleClient = this.getIdleClient(timestamp);
+        if (idleClient?.clientId) {
+            const leaveMessage = this.createLeaveMessage(idleClient.clientId, idleClient.serverMetadata);
+            void this.sendToRawDeltas(leaveMessage);
         }
     }
 
@@ -1372,7 +1464,7 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
      * If noActiveClients is set, that means we sent a NoClient message. so checkpoint the current offset
      */
     private updateCheckpointMessages(rawMessage: IQueuedMessage) {
-        this.checkpointInfo.currentDeliCheckpointMessage = rawMessage;
+        this.checkpointInfo.currentCheckpointMessage = rawMessage;
 
         if (this.noActiveClients) {
             // If noActiveClients is set, that means we sent a NoClient message
@@ -1397,11 +1489,11 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
     /**
      * Generates a checkpoint for the current state
      */
-    private generateCheckpoint(reason: DeliCheckpointReason): ICheckpointParams {
+    private generateCheckpoint(reason: CheckpointReason): ICheckpointParams {
         return {
             reason,
             deliState: this.generateDeliCheckpoint(),
-            deliCheckpointMessage: this.checkpointInfo.currentDeliCheckpointMessage as IQueuedMessage,
+            deliCheckpointMessage: this.checkpointInfo.currentCheckpointMessage as IQueuedMessage,
             kafkaCheckpointMessage: this.checkpointInfo.currentKafkaCheckpointMessage,
         };
     }
@@ -1578,27 +1670,27 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
      * Determines a checkpoint reason based on some heuristics
      * @returns a reason when it's time to checkpoint, or undefined if no checkpoint should be made
      */
-    private getCheckpointReason(): DeliCheckpointReason | undefined {
+    private getCheckpointReason(): CheckpointReason | undefined {
         const checkpointHeuristics = this.serviceConfiguration.deli.checkpointHeuristics;
         if (!checkpointHeuristics.enable) {
             // always checkpoint since heuristics are disabled
-            return DeliCheckpointReason.EveryMessage;
+            return CheckpointReason.EveryMessage;
         }
 
         if (this.checkpointInfo.rawMessagesSinceCheckpoint >= checkpointHeuristics.maxMessages) {
             // exceeded max messages since last checkpoint
-            return DeliCheckpointReason.MaxMessages;
+            return CheckpointReason.MaxMessages;
         }
 
         if ((Date.now() - this.checkpointInfo.lastCheckpointTime) >= checkpointHeuristics.maxTime) {
             // exceeded max time since last checkpoint
-            return DeliCheckpointReason.MaxTime;
+            return CheckpointReason.MaxTime;
         }
 
         if (this.lastInstruction === InstructionType.ClearCache) {
             // last instruction is for clearing the cache
             // checkpoint now to ensure that happens
-            return DeliCheckpointReason.ClearCache;
+            return CheckpointReason.ClearCache;
         }
 
         return undefined;
@@ -1607,7 +1699,7 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
     /**
      * Checkpoints the current state once the pending kafka messages are produced
      */
-    private checkpoint(reason: DeliCheckpointReason) {
+    private checkpoint(reason: CheckpointReason) {
         this.clearCheckpointIdleTimer();
 
         this.checkpointInfo.lastCheckpointTime = Date.now();
@@ -1617,10 +1709,17 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
 
         Promise.all([this.lastSendP, this.lastNoClientP]).then(
             () => {
-                if (reason === DeliCheckpointReason.ClearCache) {
+                if (reason === CheckpointReason.ClearCache) {
                     checkpointParams.clear = true;
                 }
                 void this.checkpointContext.checkpoint(checkpointParams);
+                const checkpointReason = CheckpointReason[checkpointParams.reason];
+                const checkpointResult = `Writing checkpoint. Reason: ${checkpointReason}`;
+                const lumberjackProperties = {
+                    ...getLumberBaseProperties(this.documentId, this.tenantId),
+                    checkpointReason,
+                };
+                Lumberjack.info(checkpointResult, lumberjackProperties);
             },
             (error) => {
                 const errorMsg = `Could not send message to scriptorium`;
@@ -1648,7 +1747,7 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
     private updateCheckpointIdleTimer() {
         this.clearCheckpointIdleTimer();
 
-        const initialDeliCheckpointMessage = this.checkpointInfo.currentDeliCheckpointMessage;
+        const initialDeliCheckpointMessage = this.checkpointInfo.currentCheckpointMessage;
 
         this.checkpointInfo.idleTimer = setTimeout(() => {
             this.checkpointInfo.idleTimer = undefined;
@@ -1656,8 +1755,8 @@ export class DeliLambda extends TypedEventEmitter<IDeliLambdaEvents> implements 
             // verify that the current deli message matches the raw message that kicked off this timer
             // if it matches, that means that delis state is for the raw message
             // this means our checkpoint will result in the correct state
-            if (initialDeliCheckpointMessage === this.checkpointInfo.currentDeliCheckpointMessage) {
-                this.checkpoint(DeliCheckpointReason.IdleTime);
+            if (initialDeliCheckpointMessage === this.checkpointInfo.currentCheckpointMessage) {
+                this.checkpoint(CheckpointReason.IdleTime);
             }
         }, this.serviceConfiguration.deli.checkpointHeuristics.idleTime);
     }

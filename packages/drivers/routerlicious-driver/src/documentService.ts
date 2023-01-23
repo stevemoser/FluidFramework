@@ -33,13 +33,13 @@ const RediscoverAfterTimeSinceDiscoveryMs = 5 * 60000; // 5 minute
  * The DocumentService manages the Socket.IO connection and manages routing requests to connected
  * clients.
  */
+// eslint-disable-next-line import/namespace
 export class DocumentService implements api.IDocumentService {
     private lastDiscoveredAt: number = Date.now();
     private discoverP: Promise<void> | undefined;
 
     private storageManager: GitManager | undefined;
     private noCacheStorageManager: GitManager | undefined;
-    private ordererRestWrapper: RestWrapper | undefined;
 
     public get resolvedUrl() {
         return this._resolvedUrl;
@@ -49,11 +49,14 @@ export class DocumentService implements api.IDocumentService {
         private _resolvedUrl: api.IResolvedUrl,
         protected ordererUrl: string,
         private deltaStorageUrl: string,
+        private deltaStreamUrl: string,
         private storageUrl: string,
         private readonly logger: ITelemetryLogger,
         protected tokenProvider: ITokenProvider,
         protected tenantId: string,
         protected documentId: string,
+        protected ordererRestWrapper: RouterliciousOrdererRestWrapper,
+        private readonly documentStorageServicePolicies: api.IDocumentStorageServicePolicies,
         private readonly driverPolicies: IRouterliciousDriverPolicies,
         private readonly blobCache: ICache<ArrayBufferLike>,
         private readonly snapshotTreeCache: ICache<ISnapshotTreeVersion>,
@@ -114,18 +117,11 @@ export class DocumentService implements api.IDocumentService {
         // Initialize storageManager and noCacheStorageManager
         const storageManager = await getStorageManager();
         const noCacheStorageManager = await getStorageManager(true);
-        const documentStorageServicePolicies: api.IDocumentStorageServicePolicies = {
-            caching: this.driverPolicies.enablePrefetch
-                ? api.LoaderCachingPolicy.Prefetch
-                : api.LoaderCachingPolicy.NoCaching,
-            minBlobSize: this.driverPolicies.aggregateBlobsSmallerThanBytes,
-        };
-
         this.documentStorageService = new DocumentStorageService(
             this.documentId,
             storageManager,
             this.logger,
-            documentStorageServicePolicies,
+            this.documentStorageServicePolicies,
             this.driverPolicies,
             this.blobCache,
             this.snapshotTreeCache,
@@ -145,10 +141,9 @@ export class DocumentService implements api.IDocumentService {
 
         const getRestWrapper = async (): Promise<RestWrapper> => {
             const shouldUpdateDiscoveredSessionInfo = this.shouldUpdateDiscoveredSessionInfo();
+
             if (shouldUpdateDiscoveredSessionInfo) {
                 await this.refreshDiscovery();
-            }
-            if (!this.ordererRestWrapper || shouldUpdateDiscoveredSessionInfo) {
                 const rateLimiter = new RateLimiter(this.driverPolicies.maxConcurrentOrdererRequests);
                 this.ordererRestWrapper = await RouterliciousOrdererRestWrapper.load(
                     this.tenantId,
@@ -174,6 +169,7 @@ export class DocumentService implements api.IDocumentService {
             this.documentId,
             deltaStorageService,
             this.documentStorageService,
+            this.logger,
         );
     }
 
@@ -184,39 +180,66 @@ export class DocumentService implements api.IDocumentService {
      */
     public async connectToDeltaStream(client: IClient): Promise<api.IDocumentDeltaConnection> {
         const connect = async (refreshToken?: boolean) => {
+            let ordererToken = this.ordererRestWrapper.getToken();
             if (this.shouldUpdateDiscoveredSessionInfo()) {
                 await this.refreshDiscovery();
             }
-            const ordererToken = await this.tokenProvider.fetchOrdererToken(
-                this.tenantId,
-                this.documentId,
-                refreshToken,
-            );
-            return R11sDocumentDeltaConnection.create(
-                this.tenantId,
-                this.documentId,
-                ordererToken.jwt,
-                io,
-                client,
-                this.ordererUrl,
+
+            if (refreshToken) {
+                ordererToken = await PerformanceEvent.timedExecAsync(
+                    this.logger,
+                    {
+                        eventName: "GetDeltaStreamToken",
+                        docId: this.documentId,
+                        details: JSON.stringify({
+                            refreshToken,
+                        }),
+                    },
+                    async () => {
+                        const newOrdererToken = await this.tokenProvider.fetchOrdererToken(
+                            this.tenantId,
+                            this.documentId,
+                            refreshToken,
+                        );
+                        this.ordererRestWrapper.setToken(newOrdererToken);
+                        return newOrdererToken;
+                    }
+                );
+            }
+
+            return PerformanceEvent.timedExecAsync(
                 this.logger,
+                {
+                    eventName: "ConnectToDeltaStream",
+                    docId: this.documentId,
+                },
+                async () => {
+                    return R11sDocumentDeltaConnection.create(
+                        this.tenantId,
+                        this.documentId,
+                        ordererToken.jwt,
+                        io,
+                        client,
+                        this.deltaStreamUrl,
+                        this.logger,
+                    );
+                }
             );
         };
 
         // Attempt to establish connection.
         // Retry with new token on authorization error; otherwise, allow container layer to handle.
-        let connection: api.IDocumentDeltaConnection;
         try {
-            connection = await connect();
+            const connection = await connect();
+            return connection;
         } catch (error: any) {
             if (error?.statusCode === 401) {
                 // Fetch new token and retry once,
                 // otherwise 401 will be bubbled up as non-retriable AuthorizationError.
-                connection = await connect(true /* refreshToken */);
+                return connect(true /* refreshToken */);
             }
             throw error;
         }
-        return connection;
     }
 
     /**
@@ -227,7 +250,7 @@ export class DocumentService implements api.IDocumentService {
             this.discoverP = PerformanceEvent.timedExecAsync(
                 this.logger,
                 {
-                    eventName: "refreshSessionDiscovery",
+                    eventName: "RefreshDiscovery",
                 },
                 async () => this.refreshDiscoveryCore(),
             );
@@ -241,7 +264,7 @@ export class DocumentService implements api.IDocumentService {
         this.storageUrl = fluidResolvedUrl.endpoints.storageUrl;
         this.ordererUrl = fluidResolvedUrl.endpoints.ordererUrl;
         this.deltaStorageUrl = fluidResolvedUrl.endpoints.deltaStorageUrl;
-        this.lastDiscoveredAt = Date.now();
+        this.deltaStreamUrl = fluidResolvedUrl.endpoints.deltaStreamUrl || this.ordererUrl;
     }
 
     /**
@@ -257,6 +280,15 @@ export class DocumentService implements api.IDocumentService {
         // Disconnect event is not so reliable in local testing. To ensure re-discovery when necessary,
         // re-discover if enough time has passed since last discovery.
         const pastLastDiscoveryTimeThreshold = (now - this.lastDiscoveredAt) > RediscoverAfterTimeSinceDiscoveryMs;
+        if (pastLastDiscoveryTimeThreshold) {
+            // Reset discover promise and refresh discovery.
+            this.lastDiscoveredAt = Date.now();
+            this.discoverP = undefined;
+            this.refreshDiscovery().catch(() => {
+                // Undo discovery time set on failure, so that next check refreshes.
+                this.lastDiscoveredAt = 0;
+            });
+        }
         return pastLastDiscoveryTimeThreshold;
     }
 }

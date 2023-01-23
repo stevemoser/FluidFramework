@@ -34,6 +34,7 @@ import {
     InstrumentedStorageTokenFetcher,
     IOdspUrlParts,
 } from "@fluidframework/odsp-driver-definitions";
+import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
 import { fetch } from "./fetch";
 import { pkgVersion as driverVersion } from "./packageVersion";
 import { IOdspSnapshot } from "./contracts";
@@ -137,11 +138,10 @@ export async function fetchHelper(
                 "Fetch Timeout (ETIMEDOUT)", OdspErrorType.fetchTimeout, { driverVersion });
         }
 
-        //
         // WARNING: Do not log error object itself or any of its properties!
         // It could contain PII, like URI in message itself, or token in properties.
         // It is also non-serializable object due to circular references.
-        //
+        // eslint-disable-next-line unicorn/prefer-ternary
         if (online === OnlineStatus.Offline) {
             throw new RetryableError(
                 // pre-0.58 error message prefix: Offline
@@ -225,9 +225,15 @@ export async function fetchAndParseAsJSONHelper<T>(
     return res;
 }
 
-export interface INewFileInfo {
+
+export interface IFileInfoBase {
+    type: 'New' | 'Existing';
     siteUrl: string;
     driveId: string;
+}
+
+export interface INewFileInfo extends IFileInfoBase {
+    type: 'New';
     filename: string;
     filePath: string;
     /**
@@ -238,6 +244,15 @@ export interface INewFileInfo {
      * share link type and the role type.
      */
     createLinkType?: ShareLinkTypes | ISharingLinkKind;
+}
+
+export interface IExistingFileInfo extends IFileInfoBase {
+    type: 'Existing';
+    itemId: string;
+}
+
+export function isNewFileInfo(fileInfo: INewFileInfo | IExistingFileInfo): fileInfo is INewFileInfo {
+    return fileInfo.type === undefined || fileInfo.type === 'New';
 }
 
 export function getOdspResolvedUrl(resolvedUrl: IResolvedUrl): IOdspResolvedUrl {
@@ -326,10 +341,10 @@ export function toInstrumentedOdspTokenFetcher(
                 const tokenError = wrapError(
                     error,
                     (errorMessage) => new NetworkErrorBasic(
-                        `The Host-provided token fetcher threw an error: ${errorMessage}`,
+                        `The Host-provided token fetcher threw an error`,
                         OdspErrorType.fetchTokenError,
                         typeof rawCanRetry === "boolean" ? rawCanRetry : false /* canRetry */,
-                        { method: name, driverVersion }));
+                        { method: name, errorMessage, driverVersion }));
                 throw tokenError;
             }),
             { cancel: "generic" });
@@ -339,7 +354,7 @@ export function toInstrumentedOdspTokenFetcher(
 export function createCacheSnapshotKey(odspResolvedUrl: IOdspResolvedUrl): ICacheEntry {
     const cacheEntry: ICacheEntry = {
         type: snapshotKey,
-        key: "",
+        key: odspResolvedUrl.fileVersion ?? "",
         file: {
             resolvedUrl: odspResolvedUrl,
             docId: odspResolvedUrl.hashedDocumentId,
@@ -370,4 +385,40 @@ export function buildOdspShareLinkReqParams(shareLinkType: ShareLinkTypes | ISha
     const role = (shareLinkType as ISharingLinkKind).role;
     shareLinkRequestParams = role ? `${shareLinkRequestParams}&createLinkRole=${role}` : shareLinkRequestParams;
     return shareLinkRequestParams;
+}
+
+export function measure<T>(callback: () => T): [T, number] {
+    const start = performance.now();
+    const result = callback();
+    const time = performance.now() - start;
+    return [result, time];
+}
+
+export async function measureP<T>(callback: () => Promise<T>): Promise<[T, number]> {
+    const start = performance.now();
+    const result = await callback();
+    const time = performance.now() - start;
+    return [result, time];
+}
+
+export function validateMessages(
+    reason: string,
+    messages: ISequencedDocumentMessage[],
+    from: number,
+    logger: ITelemetryLogger,
+) {
+    if (messages.length !== 0) {
+        const start = messages[0].sequenceNumber;
+        const length = messages.length;
+        const last = messages[length - 1].sequenceNumber;
+        if (start !== from) {
+            logger.sendErrorEvent({ eventName: "OpsFetchViolation", reason, from, start, last, length });
+            messages.length = 0;
+        }
+        if (last + 1 !== from + length) {
+            logger.sendErrorEvent({ eventName: "OpsFetchViolation", reason, from, start, last, length });
+            // we can do better here by finding consecutive sub-block and return it
+            messages.length = 0;
+        }
+    }
 }

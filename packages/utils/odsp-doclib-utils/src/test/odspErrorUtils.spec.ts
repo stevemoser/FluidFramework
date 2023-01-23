@@ -3,8 +3,6 @@
  * Licensed under the MIT License.
  */
 
-/* eslint-disable max-len */
-
 import { strict as assert } from "assert";
 import { DriverErrorType, IThrottlingWarning } from "@fluidframework/driver-definitions";
 import { createWriteError, GenericNetworkError } from "@fluidframework/driver-utils";
@@ -136,6 +134,22 @@ describe("OdspErrorUtils", () => {
             assert.deepStrictEqual(error.facetCodes, ["bar", "foo"]);
             assert(isILoggingError(error));
             assert.equal(error.getTelemetryProperties().innerMostErrorCode, "bar");
+        });
+        it("error response with redirect location", () => {
+            const responseText = '{ "error": { "message":"hello", "@error.redirectLocation":"url" } }';
+            const error = createOdspNetworkError(
+                "Test Message",
+                404,
+                undefined, /* retryAfterSeconds */
+                undefined, /* response */
+                responseText,
+            );
+            assert(error.errorType === DriverErrorType.fileNotFoundOrAccessDeniedError,
+                 "Error should be a fileNotFoundOrAccessDeniedError");
+            assert(error.redirectLocation === "url", "redirect location is wrong");
+            assert(isILoggingError(error));
+            assert(error.getTelemetryProperties().redirectLocation === undefined,
+                "redirect location should not be logged");
         });
         it("enriched with response data", () => {
             const mockHeaders = {

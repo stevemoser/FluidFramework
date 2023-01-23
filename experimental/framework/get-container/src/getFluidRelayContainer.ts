@@ -19,11 +19,11 @@ const createAzureCreateNewRequest = (): IRequest => (
     }
 );
 
-const verifyEnvConfig = () => {
-    if (process.env.ID === undefined) { throw Error("Define ID in .env file"); }
-    if (process.env.KEY === undefined) { throw Error("Define KEY in .env file"); }
-    if (process.env.ORDERER === undefined) { throw Error("Define ORDERER in .env file"); }
-    if (process.env.STORAGE === undefined) { throw Error("Define STORAGE in .env file"); }
+const verifyEnvConfig = (): void => {
+    if (process.env.ID === undefined) { throw new Error("Define ID in .env file"); }
+    if (process.env.KEY === undefined) { throw new Error("Define KEY in .env file"); }
+    if (process.env.ORDERER === undefined) { throw new Error("Define ORDERER in .env file"); }
+    if (process.env.STORAGE === undefined) { throw new Error("Define STORAGE in .env file"); }
 };
 
 export async function getFluidRelayContainer(
@@ -37,29 +37,25 @@ export async function getFluidRelayContainer(
     const documentServiceFactory = new RouterliciousDocumentServiceFactory(tokenProvider);
     const urlResolver = new InsecureTinyliciousUrlResolver();
 
-    let container: IContainer;
-    if (createNew) {
-        container = await createContainer({
+    const container = await (createNew
+        ? createContainer({
             documentServiceFactory,
             urlResolver,
             containerRuntimeFactory,
             request: createAzureCreateNewRequest(),
-        });
-    } else {
-        container = await getContainer({
+        }) : getContainer({
             documentServiceFactory,
             urlResolver,
             containerRuntimeFactory,
             request: { url: documentId },
-        });
-    }
+        }));
     const resolved = container.resolvedUrl;
     ensureFluidResolvedUrl(resolved);
     const containerId = resolved.id;
     return [container, containerId];
 }
 
-export function hasFluidRelayEndpoints() {
+export function hasFluidRelayEndpoints(): boolean {
     try {
         verifyEnvConfig();
         return true;

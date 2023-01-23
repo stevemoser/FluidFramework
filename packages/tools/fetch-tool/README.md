@@ -2,6 +2,7 @@
 
 Connection using ODSP or routerlicious driver to dump the messages or snapshot information on the server.
 In order to connect to ODSP, the clientID and clientSecret must be set as environment variables login__microsoft__clientId and login__microsoft__secret, respectively. If you have access to the keyvault this can be done by running [this tool](../../../tools/getkeys).
+Beware that to use fetch-tool on documents in the Microsoft tenant, you will need to follow the fetch tool usage instructions on the "Debugging Tools" page of the internal Fluid wiki.
 
 ## Usage
 
@@ -23,6 +24,20 @@ In order to connect to ODSP, the clientID and clientSecret must be set as enviro
       --numSnapshotVersions <number>  : Number of versions to load (default:10)
       --snapshotVersionIndex <number> : Index of the version to dump
       --saveDir <outdir>              : Save data of the snapshots and messages
+
+### Tips
+
+- If not done already run `npm run build`
+- Example command - run `node bin/fluid-fetch --saveDir example 'URL'` in the `fetch-tool` directory
+  - An example URL is something from office.com that looks like `https://www.office.com/launch/fluid/...`
+  - This command creates an `example` directory (if it doesn't exist) in the `fetch-tool` folder.
+  - If run multiple times without clearing the `example` directory, the snapshot will overwrite any old folders or files.
+- Looking at the `example` directory:
+  - Go to `1-XYZ/decoded/tree.json` to see the snapshot tree.
+  - Each `'#-XYZ'` string in the `tree.json` correlates to a file in the decoded folder. These files are essentially blobs.
+  - `0-XYZ/decoded/tree.json` is an older snapshot tree.
+  - The `messages.json` is a list of ops/messages that are stored.
+- For 401 authentication errors, as stated above, check that [getkeys](../../../tools/getkeys) has been run.
 
 ## Example Output
 

@@ -17,6 +17,7 @@ import {
     isFluidError,
     isValidLegacyError,
 } from "./fluidErrorBase";
+import { ITaggedTelemetryPropertyTypeExt, TelemetryEventPropertyTypeExt } from "./telemetryTypes";
 
 /** @returns true if value is an object but neither null nor an array */
 const isRegularObject = (value: any): boolean => {
@@ -112,7 +113,7 @@ export function normalizeError(
 
     // We have to construct a new Fluid Error, copying safe properties over
     const { message, stack } = extractLogSafeErrorProperties(error, false /* sanitizeStack */);
-    const fluidError: IFluidErrorBase = new NormalizedExternalError({
+    const fluidError: IFluidErrorBase = new NormalizedLoggingError({
         message,
         stack,
     });
@@ -130,11 +131,13 @@ export function normalizeError(
         fluidError.addTelemetryProperties({ typeofError: typeof (error) });
     }
 
-    const originalErrorTelemetryProps = isILoggingError(error) ? error.getTelemetryProperties() : {};
+    const errorTelemetryProps = LoggingError.typeCheck(error)
+        ? error.getTelemetryProperties()
+        : { untrustedOrigin: 1 }; // This will let us filter errors that did not originate from our own codebase
+
     fluidError.addTelemetryProperties({
-        ...originalErrorTelemetryProps,
+        ...errorTelemetryProps,
         ...annotations.props,
-        untrustedOrigin: 1, // This will let us filter to errors not originated by our own code
     });
 
     return fluidError;
@@ -151,7 +154,7 @@ let stackPopulatedOnCreation: boolean | undefined;
  * Some browsers will populate stack right away, others require throwing Error, so we do auto-detection on the fly.
  * @returns Error object that has stack populated.
  */
- export function generateErrorWithStack(): Error {
+export function generateErrorWithStack(): Error {
     const err = new Error("<<generated stack>>");
 
     if (stackPopulatedOnCreation === undefined) {
@@ -251,19 +254,29 @@ function overwriteStack(error: IFluidErrorBase | LoggingError, stack: string) {
 
 /**
  * True for any error object that is an (optionally normalized) external error
- * False for any error we created and raised within the FF codebase, or wrapped in a well-known error type
+ * False for any error we created and raised within the FF codebase via LoggingError base class,
+ * or wrapped in a well-known error type
  */
 export function isExternalError(e: any): boolean {
-    return !isValidLegacyError(e) ||
-        (e.getTelemetryProperties().untrustedOrigin === 1 &&
-         e.errorType === NormalizedExternalError.normalizedErrorType);
+    // LoggingErrors are an internal FF error type. However, an external error can be converted
+    // into a LoggingError if it is normalized. In this case we must use the untrustedOrigin flag to
+    // determine whether the original error was infact external.
+    if (LoggingError.typeCheck(e)) {
+        if ((e as NormalizedLoggingError).errorType === NORMALIZED_ERROR_TYPE) {
+            return e.getTelemetryProperties().untrustedOrigin === 1;
+        }
+        return false;
+    }
+    return !isValidLegacyError(e);
 }
 
 /**
- * Type guard to identify if a particular value (loosely) appears to be a tagged telemetry property
+ * Type guard to identify if a particular telemetry property appears to be a tagged telemetry property
  */
-export function isTaggedTelemetryPropertyValue(x: any): x is ITaggedTelemetryPropertyType {
-    return typeof (x?.tag) === "string";
+export function isTaggedTelemetryPropertyValue(
+    x: ITaggedTelemetryPropertyTypeExt | TelemetryEventPropertyTypeExt,
+): x is ITaggedTelemetryPropertyType | ITaggedTelemetryPropertyTypeExt {
+    return typeof ((x as any)?.tag) === "string";
 }
 
 /**
@@ -379,6 +392,20 @@ export class LoggingError extends Error implements ILoggingError, Omit<IFluidErr
     }
 
     /**
+    * Determines if a given object is an instance of a LoggingError
+    * @param object - any object
+    * @returns - true if the object is an instance of a LoggingError, false if not.
+    */
+    public static typeCheck(object: unknown): object is LoggingError {
+        if (typeof object === "object" && object !== null) {
+            return typeof (object as LoggingError).addTelemetryProperties === "function"
+                && typeof (object as LoggingError).getTelemetryProperties === "function"
+                && typeof (object as LoggingError).errorInstanceId === "string";
+        }
+        return false;
+    }
+
+    /**
      * Add additional properties to be logged
      */
     public addTelemetryProperties(props: ITelemetryProperties) {
@@ -401,12 +428,11 @@ export class LoggingError extends Error implements ILoggingError, Omit<IFluidErr
 }
 
 /** The Error class used when normalizing an external error */
-class NormalizedExternalError extends LoggingError {
+export const NORMALIZED_ERROR_TYPE = "genericError";
+class NormalizedLoggingError extends LoggingError {
     // errorType "genericError" is used as a default value throughout the code.
     // Note that this matches ContainerErrorType/DriverErrorType's genericError
-    static readonly normalizedErrorType = "genericError";
-
-    errorType = NormalizedExternalError.normalizedErrorType;
+    errorType = NORMALIZED_ERROR_TYPE;
 
     constructor(
         errorProps: Pick<IFluidErrorBase,
