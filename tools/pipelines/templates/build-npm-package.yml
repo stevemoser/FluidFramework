@@ -443,7 +443,7 @@ stages:
               targetType: 'inline'
               workingDirectory: $(toolAbsolutePath)
               script: |
-                cp ${{ parameters.testWorkspace }}/.npmrc . ;
+                cp ${{ variables.testWorkspace }}/.npmrc . ;
                 npm install @ff-internal/aria-logger;
                 npm i;
                 npm run build:compile;
