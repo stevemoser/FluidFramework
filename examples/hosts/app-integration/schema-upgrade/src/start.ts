@@ -6,15 +6,25 @@
 import React from "react";
 import ReactDOM from "react-dom";
 
-import { createTinyliciousCreateNewRequest } from "@fluidframework/tinylicious-driver";
-import { DemoCodeLoader } from "./demoLoaders";
-import { ModelLoader } from "./modelLoading";
-import { externalDataSource } from "./externalData";
-import { IMigratableModel, IVersionedModel } from "./migrationInterfaces";
-import { Migrator } from "./migrator";
-import { IInventoryListContainer } from "./modelInterfaces";
-import { TinyliciousService } from "./tinyliciousService";
-import { DebugView, InventoryListContainerView } from "./view";
+import type {
+    IMigratableModel,
+    IVersionedModel,
+} from "@fluid-example/example-utils";
+import {
+    Migrator,
+    ModelLoader,
+} from "@fluid-example/example-utils";
+import { RouterliciousDocumentServiceFactory } from "@fluidframework/routerlicious-driver";
+import {
+    createTinyliciousCreateNewRequest,
+    InsecureTinyliciousTokenProvider,
+    InsecureTinyliciousUrlResolver,
+} from "@fluidframework/tinylicious-driver";
+
+import { inventoryListDataTransformationCallback } from "./dataTransform";
+import { DemoCodeLoader } from "./demoCodeLoader";
+import type { IInventoryListAppModel } from "./modelInterfaces";
+import { DebugView, InventoryListAppView } from "./view";
 
 const updateTabForId = (id: string) => {
     // Update the URL with the actual ID
@@ -24,7 +34,7 @@ const updateTabForId = (id: string) => {
     document.title = id;
 };
 
-const isIInventoryListContainer = (model: IVersionedModel): model is IInventoryListContainer => {
+const isIInventoryListAppModel = (model: IVersionedModel): model is IInventoryListAppModel => {
     return model.version === "one" || model.version === "two";
 };
 
@@ -36,37 +46,35 @@ const render = (model: IVersionedModel) => {
     // This demo uses the same view for both versions 1 & 2 - if we wanted to use different views for different model
     // versions, we could check its version here and select the appropriate view.  Or we could even write ourselves a
     // view code loader to pull in the view dynamically based on the version we discover.
-    if (isIInventoryListContainer(model)) {
+    if (isIInventoryListAppModel(model)) {
         ReactDOM.render(
-            React.createElement(InventoryListContainerView, { model }),
+            React.createElement(InventoryListAppView, { model }),
             appDiv,
+        );
+
+        // The DebugView is just for demo purposes, to manually control code proposal and inspect the state.
+        const debugDiv = document.getElementById("debug") as HTMLDivElement;
+        ReactDOM.unmountComponentAtNode(debugDiv);
+        ReactDOM.render(
+            React.createElement(DebugView, {
+                model,
+                getUrlForContainerId,
+            }),
+            debugDiv,
         );
     } else {
         throw new Error(`Don't know how to render version ${model.version}`);
     }
-
-    // The DebugView is just for demo purposes, to manually control code proposal and inspect the state.
-    const debugDiv = document.getElementById("debug") as HTMLDivElement;
-    ReactDOM.unmountComponentAtNode(debugDiv);
-    ReactDOM.render(
-        React.createElement(DebugView, {
-            model,
-            getUrlForContainerId,
-        }),
-        debugDiv,
-    );
 };
 
 async function start(): Promise<void> {
-    const tinyliciousService = new TinyliciousService();
-
     // If we assumed the container code could consistently present a model to us, we could bake that assumption
     // in here as well as in the Migrator -- both places just need a reliable way to get a model regardless of the
     // (unknown) container version.  So the ModelLoader would be replaced by whatever the consistent request call
     // (e.g. container.request({ url: "mode" })) looks like.
     const modelLoader = new ModelLoader<IMigratableModel>({
-        urlResolver: tinyliciousService.urlResolver,
-        documentServiceFactory: tinyliciousService.documentServiceFactory,
+        urlResolver: new InsecureTinyliciousUrlResolver(),
+        documentServiceFactory: new RouterliciousDocumentServiceFactory(new InsecureTinyliciousTokenProvider()),
         codeLoader: new DemoCodeLoader(),
         generateCreateNewRequest: createTinyliciousCreateNewRequest,
     });
@@ -79,15 +87,6 @@ async function start(): Promise<void> {
         // Normally we would create with the most-recent version.
         const createResponse = await modelLoader.createDetached("one");
         model = createResponse.model;
-
-        // Fetching and importing the data here is optional
-        // For demo purposes it's nice to have some prepopulated entries though.
-        const fetchedData = await externalDataSource.fetchData();
-        if (!model.supportsDataFormat(fetchedData)) {
-            throw new Error("Model doesn't support fetched data format");
-        }
-        await model.importData(fetchedData);
-
         id = await createResponse.attach();
     } else {
         id = location.hash.substring(1);
@@ -96,7 +95,9 @@ async function start(): Promise<void> {
 
     // The Migrator takes the starting state (model and id) and watches for a migration proposal.  It encapsulates
     // the migration logic and just lets us know when a new model is loaded and available (with the "migrated" event).
-    const migrator = new Migrator(modelLoader, model, id);
+    // It also takes a dataTransformationCallback to help in transforming data export format to be compatible for
+    // import with newly created models.
+    const migrator = new Migrator(modelLoader, model, id, inventoryListDataTransformationCallback);
     migrator.on("migrated", () => {
         model.close();
         render(migrator.currentModel);
@@ -108,7 +109,7 @@ async function start(): Promise<void> {
     // ModelLoader doesn't know about.
     // However, this will never be hit in this demo since we have a finite set of models to support.  If the model
     // code loader pulls in the appropriate model dynamically, this might also never be hit since all clients
-    // theoretically are referencing the same model library.
+    // are theoretically referencing the same model library.
     migrator.on("migrationNotSupported", (version: string) => {
         // To move forward, we would need to acquire a model loader capable of loading the given model, retry the
         // load, and set up a new Migrator with the new model loader.

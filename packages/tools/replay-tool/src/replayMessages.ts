@@ -354,12 +354,6 @@ export class ReplayTool {
             return false;
         }
 
-        // GC will consider unreferenced node in old documents to be inactive. When such nodes receive ops or are
-        // loaded, GC will log an error. Ignore those errors since we don't care about them when replaying old docs.
-        if (event.eventName.includes("GarbageCollector:inactiveObject_")) {
-            return false;
-        }
-
         return this.shouldReportError(errorString);
     }
 
@@ -399,7 +393,6 @@ export class ReplayTool {
                         } catch (err) {}
                     }
                     if (this.args.fromVersion === undefined) {
-                        // eslint-disable-next-line max-len
                         console.error(`Failed to parse ${name} snapshot to find .attributes blob and check sequence number. This may result in failure to process file. In such case, please point to any snapshot via --from argument.`);
                     }
                 }
@@ -751,10 +744,10 @@ export class ReplayTool {
                     try {
                         strict.deepStrictEqual(withoutDds1, withoutDds2);
 
-                        assert("entries" in channels1, "expected tree");
-                        assert("entries" in channels2, "expected tree");
+                        assert("entries" in channels1, 0x3b2 /* expected tree */);
+                        assert("entries" in channels2, 0x3b3 /* expected tree */);
 
-                        assert(channels1.entries.length === channels2.entries.length, "not equal");
+                        assert(channels1.entries.length === channels2.entries.length, 0x3b4 /* not equal */);
 
                         for (let i = 0; i < channels1.entries.length; i++) {
                             await assertDdsEqual(channels1.entries[i], channels2.entries[i]);
@@ -771,7 +764,6 @@ export class ReplayTool {
         }
 
         if (failed) {
-            // eslint-disable-next-line max-len
             this.reportError(`\nOp ${op}: Discrepancy between ${name1} & ${name2}! Likely a bug in snapshot load-save sequence!`, error);
 
             // Write the failed snapshots under 'FailedSnapshot' sub-directory of the current directory. This will in
@@ -831,7 +823,7 @@ async function assertDdsEqual(d1: ITreeEntry | undefined, d2: ITreeEntry | undef
                                             : {};
 
     if (parsed.type !== SharedMatrixFactory.Type) {
-        assert(d1.value.entries.length === d2.value.entries.length, "");
+        assert(d1.value.entries.length === d2.value.entries.length, 0x3b5 /*  */);
         for (let i = 0; i < d1.value.entries.length; i++) {
             await assertDdsEqual(d1.value.entries[i], d2.value.entries[i]);
         }

@@ -8,11 +8,14 @@ import { IDocumentMessage, ISequencedDocumentMessage } from "@fluidframework/pro
 import { ITelemetryLogger } from "@fluidframework/common-definitions";
 import { ChildLogger } from "@fluidframework/telemetry-utils";
 import { assert, performance } from "@fluidframework/common-utils";
-import { isUnpackedRuntimeMessage } from "@fluidframework/driver-utils";
-import { DataCorruptionError, extractSafePropertiesFromMessage } from "@fluidframework/container-utils";
+import { isRuntimeMessage } from "@fluidframework/driver-utils";
+import {
+    DataCorruptionError,
+    DataProcessingError,
+    extractSafePropertiesFromMessage,
+} from "@fluidframework/container-utils";
 import { DeltaScheduler } from "./deltaScheduler";
 import { pkgVersion } from "./packageVersion";
-import { latencyThreshold } from "./connectionTelemetry";
 
 type IRuntimeMessageMetadata = undefined | {
     batch?: boolean;
@@ -20,10 +23,12 @@ type IRuntimeMessageMetadata = undefined | {
 
 /**
  * This class has the following responsibilities:
+ *
  * 1. It tracks batches as we process ops and raises "batchBegin" and "batchEnd" events.
- *    As part of it, it validates batch correctness (i.e. no system ops in the middle of batch)
+ * As part of it, it validates batch correctness (i.e. no system ops in the middle of batch)
+ *
  * 2. It creates instance of ScheduleManagerCore that ensures we never start processing ops from batch
- *    unless all ops of the batch are in.
+ * unless all ops of the batch are in.
  */
 export class ScheduleManager {
     private readonly deltaScheduler: DeltaScheduler;
@@ -33,13 +38,14 @@ export class ScheduleManager {
     constructor(
         private readonly deltaManager: IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>,
         private readonly emitter: EventEmitter,
+        readonly getClientId: () => string | undefined,
         private readonly logger: ITelemetryLogger,
     ) {
         this.deltaScheduler = new DeltaScheduler(
             this.deltaManager,
             ChildLogger.create(this.logger, "DeltaScheduler"),
         );
-        void new ScheduleManagerCore(deltaManager, logger);
+        void new ScheduleManagerCore(deltaManager, getClientId, logger);
     }
 
     public beforeOpProcessing(message: ISequencedDocumentMessage) {
@@ -52,11 +58,7 @@ export class ScheduleManager {
             this.deltaScheduler.batchBegin(message);
 
             const batch = (message?.metadata as IRuntimeMessageMetadata)?.batch;
-            if (batch) {
-                this.batchClientId = message.clientId;
-            } else {
-                this.batchClientId = undefined;
-            }
+            this.batchClientId = batch ? message.clientId : undefined;
         }
     }
 
@@ -99,6 +101,7 @@ class ScheduleManagerCore {
 
     constructor(
         private readonly deltaManager: IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>,
+        private readonly getClientId: () => string | undefined,
         private readonly logger: ITelemetryLogger,
     ) {
         // Listen for delta manager sends and add batch metadata to messages
@@ -208,15 +211,6 @@ class ScheduleManagerCore {
 
         this.localPaused = false;
 
-        // Random round number - we want to know when batch waiting paused op processing.
-        if (duration !== undefined && duration > latencyThreshold) {
-            this.logger.sendErrorEvent({
-                eventName: "MaxBatchWaitTimeExceeded",
-                duration,
-                sequenceNumber: endBatch,
-                length: endBatch - startBatch,
-            });
-        }
         this.deltaManager.inbound.resume();
     }
 
@@ -231,12 +225,27 @@ class ScheduleManagerCore {
             0x299 /* "non-synchronized state" */);
 
         const metadata = message.metadata as IRuntimeMessageMetadata;
+        // batchMetadata will be true for the message that starts a batch, false for the one that ends it, and
+        // undefined for all other messages.
         const batchMetadata = metadata?.batch;
 
         // Protocol messages are never part of a runtime batch of messages
-        if (!isUnpackedRuntimeMessage(message)) {
+        if (!isRuntimeMessage(message)) {
             // Protocol messages should never show up in the middle of the batch!
-            assert(this.currentBatchClientId === undefined, 0x29a /* "System message in the middle of batch!" */);
+            if (this.currentBatchClientId !== undefined) {
+                throw DataProcessingError.create(
+                    "Received a system message during batch processing", // Formerly known as assert 0x29a
+                    "trackPending",
+                    message,
+                    {
+                        runtimeVersion: pkgVersion,
+                        batchClientId: this.currentBatchClientId,
+                        pauseSequenceNumber: this.pauseSequenceNumber,
+                        localBatch: this.currentBatchClientId === this.getClientId(),
+                        messageType: message.type,
+                    });
+            }
+
             assert(batchMetadata === undefined, 0x29b /* "system op in a batch?" */);
             assert(!this.localPaused, 0x29c /* "we should be processing ops when there is no active batch" */);
             return;
@@ -247,27 +256,28 @@ class ScheduleManagerCore {
             return;
         }
 
-        // If the client ID changes then we can move the pause point. If it stayed the same then we need to check.
-        // If batchMetadata is not undefined then if it's true we've begun a new batch - if false we've ended
-        // the previous one
-        if (this.currentBatchClientId !== undefined || batchMetadata === false) {
-            if (this.currentBatchClientId !== message.clientId) {
-                // "Batch not closed, yet message from another client!"
-                throw new DataCorruptionError(
-                    "OpBatchIncomplete",
-                    {
-                        runtimeVersion: pkgVersion,
-                        batchClientId: this.currentBatchClientId,
-                        ...extractSafePropertiesFromMessage(message),
-                    });
-            }
+        // If we got here, the message is part of a batch. Either starting, in progress, or ending.
+
+        // If this is not the start of the batch, error out if the message was sent by a client other than the one that
+        // started the current batch (it should not be possible for ops from other clients to get interleaved with a batch).
+        if (this.currentBatchClientId !== undefined && this.currentBatchClientId !== message.clientId) {
+            throw new DataCorruptionError(
+                "OpBatchIncomplete",
+                {
+                    runtimeVersion: pkgVersion,
+                    batchClientId: this.currentBatchClientId,
+                    pauseSequenceNumber: this.pauseSequenceNumber,
+                    localBatch: this.currentBatchClientId === this.getClientId(),
+                    localMessage: message.clientId === this.getClientId(),
+                    ...extractSafePropertiesFromMessage(message),
+                });
         }
 
         // The queue is
         // 1. paused only when the next message to be processed is the beginning of a batch. Done in two places:
         //    - in afterOpProcessing() - processing ops until reaching start of incomplete batch
-        //    - here (batchMetadata == false below), when queue was empty and start of batch showed up.
-        // 2. resumed when batch end comes in (batchMetadata === true case below)
+        //    - here, when queue was empty and start of batch showed up (batchMetadata === true below).
+        // 2. resumed when batch end comes in (batchMetadata === false below)
 
         if (batchMetadata) {
             assert(this.currentBatchClientId === undefined, 0x29e /* "there can't be active batch" */);

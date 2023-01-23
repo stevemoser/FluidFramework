@@ -3,7 +3,7 @@
  * Licensed under the MIT License.
  */
 
-import EventEmitter from "events";
+import { EventEmitter } from "events";
 import { ITelemetryLogger } from "@fluidframework/common-definitions";
 import { assert, performance } from "@fluidframework/common-utils";
 import { ISequencedDocumentMessage } from "@fluidframework/protocol-definitions";
@@ -67,10 +67,9 @@ export class BatchTracker {
  * Track batch sizes in terms of op counts and processing times
  *
  * @param batchEventEmitter - event emitter which tracks the lifecycle of batch operations
- * @param logger - logger
+ * @param logger - See {@link @fluidframework/common-definitions#ITelemetryLogger}
  * @param batchLengthThreshold - threshold for the length of a batch when to send an error event
  * @param batchCountSamplingRate - rate for batches for which to send an event with its characteristics
- * @returns
  */
 export const BindBatchTracker = (
     batchEventEmitter: EventEmitter,

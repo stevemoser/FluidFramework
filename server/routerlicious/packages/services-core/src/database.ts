@@ -52,7 +52,7 @@ export interface ICollection<T> {
      * @param query - data we want to find
      * @param sort - object with property we use to sort on, whose value is 0 for descending order and 1 for ascending
      * @param limit - optional. if set, limits the number of documents/records the cursor will return.
-     *                Our mongo layer internally used 2000 by default.
+     * Our mongo layer internally used 2000 by default.
      * @param skip - optional. If set, defines the number of documents to skip in the results set.
      * @returns - sorted results of query
      */
@@ -79,6 +79,18 @@ export interface ICollection<T> {
      * @param value - data to insert to the database if we cannot find query
      */
     findOrCreate(query: any, value: T): Promise<{ value: T; existing: boolean; }>;
+
+    /**
+     * Finds query in the database and replace its value.
+     * Do nothing if query was not found.
+     *
+     * @param query - data we want to find
+     * @param value - data to update to the database
+     */
+    findAndUpdate(query: any, value: T): Promise<{
+        value: T;
+        existing: boolean;
+    }>;
 
     /**
      * Finds the query in the database. If it exists, update the value to set.
@@ -138,6 +150,14 @@ export interface ICollection<T> {
     createIndex(index: any, unique: boolean): Promise<void>;
 
     createTTLIndex?(index: any, mongoExpireAfterSeconds?: number): Promise<void>;
+}
+
+export interface IRetryable {
+    retryEnabled: boolean;
+}
+
+export function isRetryEnabled<T>(collection: ICollection<T>): boolean {
+    return (collection as unknown as IRetryable).retryEnabled === true;
 }
 
 export type IDbEvents = "close" | "reconnect" | "error" | "reconnectFailed";

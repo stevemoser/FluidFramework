@@ -42,6 +42,9 @@ export const canWrite: (scopes: string[]) => boolean;
 export const choose: () => string;
 
 // @public
+export function convertSortedNumberArrayToRanges(numberArray: number[]): number[][];
+
+// @public
 export function convertSummaryTreeToWholeSummaryTree(parentHandle: string | undefined, tree: ISummaryTree, path?: string, rootNodeName?: string): IWholeSummaryTree;
 
 // @public
@@ -342,6 +345,7 @@ export interface IPatchRefParamsExternal extends resources.IPatchRefParams {
 
 // @public
 export interface ISession {
+    deltaStreamUrl: string;
     historianUrl: string;
     isSessionActive: boolean;
     isSessionAlive: boolean;
@@ -479,6 +483,9 @@ export interface IWriteSummaryResponse {
     // (undocumented)
     id: string;
 }
+
+// @public
+export const LatestSummaryId = "latest";
 
 // @public
 export class NetworkError extends Error {

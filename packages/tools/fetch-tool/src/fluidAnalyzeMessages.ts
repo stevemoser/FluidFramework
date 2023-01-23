@@ -13,8 +13,7 @@ import {
 import { IAttachMessage, IEnvelope } from "@fluidframework/runtime-definitions";
 import {
     IChunkedOp,
-    isRuntimeMessage,
-    RuntimeMessage,
+    ContainerMessageType,
     unpackRuntimeMessage,
 } from "@fluidframework/container-runtime";
 import { DataStoreMessageType } from "@fluidframework/datastore";
@@ -149,11 +148,9 @@ function dumpStats(
 
     if (props.removeTotals === undefined) {
         if (allOtherCount || allOtherSize) {
-            // eslint-disable-next-line max-len
             console.log(`${`All Others (${sorted.length - recordsToShow})`.padEnd(nameLength)} │ ${formatNumber(allOtherCount).padStart(fieldSizes[0])} ${formatNumber(allOtherSize).padStart(fieldSizes[1])}`);
         }
         console.log(`${"─".repeat(nameLength + 1)}┼${"─".repeat(fieldsLength + 1)}`);
-        // eslint-disable-next-line max-len
         console.log(`${"Total".padEnd(nameLength)} │ ${formatNumber(totalCount).padStart(fieldSizes[0])} ${formatNumber(sizeTotal).padStart(fieldSizes[1])}`);
     }
 }
@@ -284,7 +281,6 @@ class FilteredMessageAnalyzer implements IMessageAnalyzer {
 
     public reportAnalyzes(lastOp: ISequencedDocumentMessage): void {
         if (this.filtered) {
-            // eslint-disable-next-line max-len
             console.log(`\nData is filtered according to --filter:messageType argument(s):\nOp size: ${this.sizeFiltered} / ${this.sizeTotal}\nOp count ${this.opsFiltered} / ${this.opsTotal}`);
         }
         if (this.opsTotal === 0) {
@@ -309,7 +305,6 @@ class MessageDensityAnalyzer implements IMessageAnalyzer {
             if (message.sequenceNumber !== 1) {
                 const timeDiff = durationFromTime(message.timestamp - this.timeStart);
                 const opsString = `ops = [${this.opLimit - this.opChunk}, ${this.opLimit - 1}]`.padEnd(26);
-                // eslint-disable-next-line max-len
                 const timeString = `time = [${durationFromTime(this.timeStart - this.doctimerStart)}, ${durationFromTime(message.timestamp - this.doctimerStart)}]`;
                 this.ranges.set(
                     `${opsString} ${timeString}`,
@@ -473,31 +468,30 @@ export async function printMessageStats(
 }
 
 function processOp(
-    message: ISequencedDocumentMessage,
+    runtimeMessage: ISequencedDocumentMessage,
     dataType: Map<string, string>,
     objectStats: Map<string, [number, number]>,
     msgSize: number,
     dataTypeStats: Map<string, [number, number]>,
     messageTypeStats: Map<string, [number, number]>,
     chunkMap: Map<string, { chunks: string[]; totalSize: number; }>) {
-    let type = message.type;
+    let type = runtimeMessage.type;
     let recorded = false;
     let totalMsgSize = msgSize;
     let opCount = 1;
-    if (isRuntimeMessage(message)) {
-        let runtimeMessage = unpackRuntimeMessage(message);
-        const messageType = runtimeMessage.type as RuntimeMessage;
+    if (unpackRuntimeMessage(runtimeMessage)) {
+        const messageType = runtimeMessage.type as ContainerMessageType;
         switch (messageType) {
-            case RuntimeMessage.Attach: {
+            case ContainerMessageType.Attach: {
                 const attachMessage = runtimeMessage.contents as IAttachMessage;
                 processDataStoreAttachOp(attachMessage, dataType);
                 break;
             }
             // skip for now because these ops do not have contents
-            case RuntimeMessage.BlobAttach: {
+            case ContainerMessageType.BlobAttach: {
                 break;
             }
-            case RuntimeMessage.ChunkedOp: {
+            case ContainerMessageType.ChunkedOp: {
                 const chunk = runtimeMessage.contents as IChunkedOp;
                 if (!chunkMap.has(runtimeMessage.clientId)) {
                     chunkMap.set(
@@ -517,21 +511,20 @@ function processOp(
                 value.totalSize += msgSize;
                 if (chunk.chunkId === chunk.totalChunks) {
                     opCount = chunk.totalChunks; // 1 op for each chunk.
-                    runtimeMessage = Object.create(runtimeMessage);
-                    runtimeMessage.contents = chunks.join("");
-                    runtimeMessage.type = chunk.originalType;
+                    const patchedMessage = Object.create(runtimeMessage);
+                    patchedMessage.contents = chunks.join("");
+                    patchedMessage.type = chunk.originalType;
                     type = chunk.originalType;
                     totalMsgSize = value.totalSize;
-                    chunkMap.delete(runtimeMessage.clientId);
+                    chunkMap.delete(patchedMessage.clientId);
                 } else {
                     return;
                 }
                 // eslint-disable-next-line no-fallthrough
             }
-            case RuntimeMessage.FluidDataStoreOp:
-            case RuntimeMessage.Alias:
-            case RuntimeMessage.Rejoin:
-            case RuntimeMessage.Operation:
+            case ContainerMessageType.FluidDataStoreOp:
+            case ContainerMessageType.Alias:
+            case ContainerMessageType.Rejoin:
                 {
                     let envelope = runtimeMessage.contents as IEnvelope;
                     // TODO: Legacy?
@@ -619,12 +612,7 @@ function processDataStoreAttachOp(
 
     // That's data store, and it brings a bunch of data structures.
     // Let's try to crack it.
-    let parsedAttachMessage: IAttachMessage;
-    if (typeof attachMessage === "string") {
-        parsedAttachMessage = JSON.parse(attachMessage);
-    } else {
-        parsedAttachMessage = attachMessage;
-    }
+    const parsedAttachMessage = typeof attachMessage === "string" ? JSON.parse(attachMessage) : attachMessage;
     for (const entry of parsedAttachMessage.snapshot.entries) {
         if (entry.type === TreeEntry.Tree) {
             for (const entry2 of entry.value.entries) {
