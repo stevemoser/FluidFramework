@@ -439,15 +439,14 @@ stages:
               overwriteExistingFiles: true
 
           - task: Bash@3
-                displayName: 'Prepare telemetry-generator'
-                inputs:
-                  targetType: 'inline'
-                  workingDirectory: $(toolAbsolutePath)
-                  script: |
-                    cp ${{ parameters.testWorkspace }}/.npmrc . ;
-                    npm install @ff-internal/aria-logger;
-                    npm i;
-                    npm run build:compile;
+              inputs:
+                targetType: 'inline'
+                workingDirectory: $(toolAbsolutePath)
+                script: |
+                  cp ${{ parameters.testWorkspace }}/.npmrc . ;
+                  npm install @ff-internal/aria-logger;
+                  npm i;
+                  npm run build:compile;
 
           - task: Bash@3
               displayName: Write measurements to Aria/Kusto - bundle sizes
