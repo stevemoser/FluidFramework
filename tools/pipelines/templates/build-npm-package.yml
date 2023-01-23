@@ -433,12 +433,14 @@ stages:
               customCommand: 'run bundle-analysis:run'
 
           - task: ExtractFiles@1
+            displayName: 'Extract report from bundle'
             inputs:
               archiveFilePatterns: '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/bundleAnalysis.zip'
               cleanDestinationFolder: false
               overwriteExistingFiles: true
 
           - task: Bash@3
+            displayName: 'Prepare telemetry-generator'
             inputs:
               targetType: 'inline'
               workingDirectory: $(toolAbsolutePath)

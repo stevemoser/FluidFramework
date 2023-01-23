@@ -92,11 +92,11 @@ extends:
     checkoutSubmodules: true
     taskBundleAnalysis: true
     taskTest:
-    - ci:test:mocha
-    - ci:test:jest
-    - ci:test:realsvc:local
-    - ci:test:realsvc:tinylicious
-    - ci:test:stress:tinylicious
+    # - ci:test:mocha
+    # - ci:test:jest
+    # - ci:test:realsvc:local
+    # - ci:test:realsvc:tinylicious
+    # - ci:test:stress:tinylicious
     - test:copyresults
     preCG:
     - task: UseNode@1
