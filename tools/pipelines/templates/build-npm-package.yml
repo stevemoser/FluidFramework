@@ -409,12 +409,12 @@ stages:
           # See the getZipObjectFromArtifact function in @fluidframework/bundle-size-tools for details about the issue.
           - task: PublishBuildArtifacts@1
             displayName: Publish Artifacts - bundle-analysis
-            condition:
-              and(
-                succeeded(),
-                ne(variables['Build.Reason'], 'PullRequest'),
-                eq(${{ parameters.taskPublishBundleSizeArtifacts }}, true)
-              )
+            # condition:
+            #  and(
+            #    succeeded(),
+            #    ne(variables['Build.Reason'], 'PullRequest'),
+            #    eq(${{ parameters.taskPublishBundleSizeArtifacts }}, true)
+            #  )
             inputs:
               PathtoPublish: '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis'
               Artifactname: 'bundleAnalysis'
@@ -422,7 +422,7 @@ stages:
 
           - task: Npm@1
             displayName: run bundle size comparison
-            condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+            # condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
             env:
               ADO_API_TOKEN: $(System.AccessToken)
               DANGER_GITHUB_API_TOKEN: $(githubPublicRepoSecret)
