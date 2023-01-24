@@ -469,6 +469,12 @@ stages:
             inputs:
               workingFile: ${{ variables.testWorkspace }}/.npmrc
 
+          - task: npmAuthenticate@0
+            displayName: 'npm authenticate (office feed)'
+            inputs:
+              workingFile: ${{ variables.testWorkspace }}/.npmrc
+              customEndpoint: 'Office Packages - Readonly'
+
           - task: Bash@3
             displayName: 'List report.json and npmrc'
             inputs:
@@ -476,7 +482,7 @@ stages:
               workingDirectory:  ${{ parameters.buildDirectory }}
               script: |
                 ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
-                ls -la '${{ variables.testWorkspace }}/.npmrc';
+                cat '${{ variables.testWorkspace }}/.npmrc';
 
           - task: Bash@3
             displayName: 'Prepare telemetry-generator'
