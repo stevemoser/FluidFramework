@@ -462,13 +462,6 @@ stages:
             inputs:
               workingFile: ${{ variables.testWorkspace }}/.npmrc
 
-          # Auth to Office feed
-          - task: npmAuthenticate@0
-            displayName: 'npm authenticate (office feed)'
-            inputs:
-              workingFile: ${{ variables.testWorkspace }}/.npmrc
-              customEndpoint: 'Office Packages - Readonly'
-
           - task: Bash@3
             displayName: 'List report.json and npmrc'
             inputs:
