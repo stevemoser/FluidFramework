@@ -439,7 +439,7 @@ stages:
 
           - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
             - task: Bash@3
-              displayName: Create test directory
+              displayName: Create test directory for uploading telemetry
               inputs:
                 targetType: 'inline'
                 script: |
@@ -448,7 +448,7 @@ stages:
             # Auth to internal feed
             - task: Bash@3
               name: Initialize
-              displayName: Initialize
+              displayName: Initialize .npmrc
               inputs:
                 targetType: 'inline'
                 workingDirectory: ${{ variables.testWorkspace }}
@@ -486,7 +486,6 @@ stages:
                 workingDirectory:  ${{ parameters.buildDirectory }}
                 script: |
                   echo "Build Directory is ${{ parameters.buildDirectory }}"
-                  echo "##vso[task.setvariable variable=testncc]${{ parameters.buildDirectory }}"
                   ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
                   cat '${{ variables.testWorkspace }}/.npmrc';
 
@@ -498,7 +497,6 @@ stages:
                 script: |
                   ls -la '${{ variables.testWorkspace }}';
                   ls -la '${{ parameters.buildDirectory }}';
-                  echo "Build Directory is ${{ parameters.buildDirectory }}"
                   cp ${{ variables.testWorkspace }}/.npmrc . ;
                   npm install @ff-internal/aria-logger;
                   npm i;
@@ -512,25 +510,12 @@ stages:
                 workingDirectory: ${{ variables.toolAbsolutePath }}
                 script: |
                   echo "Writing the following performance tests results to Aria/Kusto"
-                  echo ${{ variables.testncc }}
-                  ls -la '../../';
-                  ls -la '../../artifacts/bundleAnalysis/';
+                  echo "Report Size:"
                   ls -la '../../examples/utils/bundle-size-tests/bundleAnalysis/report.json';
                   echo "Tools Path:"
-                  ls -la '../../tools/telemetry-generator';
-                  echo "Tools Path1:"
-                  ls -la '../../tools/telemetry-generator/dist';
-                  echo "Tools Path2:"
-                  ls -la '../../tools/telemetry-generator/src';
-                  echo "Tools Path25:"
                   ls -la '../../tools/telemetry-generator/dist/handlers';
-                  echo "Tools Path3"
-                  ls -la '../../tools/telemetry-generator/src/handlers';
-                  echo "Tools Path4"
-                  ls -la '$(Build.SourcesDirectory)';
-                  echo "Tools Path5"
-                  ls -la '${{parameters.buildDirectory }}';
                   node --require @ff-internal/aria-logger bin/run --handlerModule $(Build.SourcesDirectory)/tools/telemetry-generator/dist/handlers/bundleSizeHandler.js --dir '../../artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
+                  rm ../../tools/telemetry-generator/.npmrc;
         # Docs
         - ${{ if ne(parameters.taskBuildDocs, false) }}:
           - task: Npm@1
