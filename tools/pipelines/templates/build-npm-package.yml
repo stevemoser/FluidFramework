@@ -460,7 +460,7 @@ stages:
             displayName: 'Prepare telemetry-generator'
             inputs:
               targetType: 'inline'
-              workingDirectory:  ${{ toolAbsolutePath }}
+              workingDirectory:  ${{ variables.toolAbsolutePath }}
               script: |
                 ls -la '${{ variables.testWorkspace }}';
                 ls -la '${{ parameters.buildDirectory }}';
