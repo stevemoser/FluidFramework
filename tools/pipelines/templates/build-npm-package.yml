@@ -444,8 +444,8 @@ stages:
             displayName: 'npm install aria logger'
             inputs:
               command: 'custom'
-              workingDir: ${{ parameters.testWorkspace }}
-              customCommand: 'install ${{ parameters.loggerPackage }}'
+              workingDir: ${{ variables.testWorkspace }}
+              customCommand: 'install @ff-internal/aria-logger'
               customRegistry: 'useNpmrc'
 
           - task: Bash@3
@@ -454,7 +454,6 @@ stages:
               targetType: 'inline'
               workingDirectory: $(toolAbsolutePath)
               script: |
-                ls -la '${{ toolAbsolutePath }}';
                 ls -la '${{ variables.testWorkspace }}';
                 cp ${{ variables.testWorkspace }}/.npmrc . ;
                 npm install @ff-internal/aria-logger;
