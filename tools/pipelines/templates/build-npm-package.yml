@@ -513,7 +513,7 @@ stages:
                 script: |
                   echo "Writing the following performance tests results to Aria/Kusto"
                   echo ${{ variables.testncc }}
-                  ls -la ''../../';
+                  ls -la '../../';
                   ls -la '../../artifacts/bundleAnalysis/';
                   ls -la '../../examples/utils/bundle-size-tests/bundleAnalysis/report.json';
                   node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '../../artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
