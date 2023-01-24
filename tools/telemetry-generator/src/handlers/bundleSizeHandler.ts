@@ -17,13 +17,6 @@ module.exports = function handler(fileData, logger) {
 
         for (const asset of fileData.assets) {
             if (asset.size > 0 ) {
-                console.log({
-                    category: "performance",
-                    eventName: "Benchmark",
-                    benchmarkType: "BundleSize",
-                    name: asset.name,
-                    size: asset.size,
-                });
                 logger.send({
                     category: "performance",
                     eventName: "Benchmark",
