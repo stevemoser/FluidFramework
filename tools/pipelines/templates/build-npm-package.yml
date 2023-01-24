@@ -438,7 +438,7 @@ stages:
           - task: npmAuthenticate@0
             displayName: 'npm authenticate (internal feed)'
             inputs:
-              workingFile: ${{ parameters.testWorkspace }}/.npmrc
+              workingFile: ${{ variables.testWorkspace }}/.npmrc
 
           # Auth to Office feed
           - task: npmAuthenticate@0
