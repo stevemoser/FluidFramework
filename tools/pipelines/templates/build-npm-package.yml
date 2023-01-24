@@ -509,9 +509,9 @@ stages:
                 workingDirectory: ${{ variables.toolAbsolutePath }}
                 script: |
                   echo "Writing the following performance tests results to Aria/Kusto"
-                  ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/';
-                  ls -la '${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis/report.json';
-                  node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
+                  ls -la '${{ variables.toolAbsolutePath }}/${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/';
+                  ls -la '${{ variables.toolAbsolutePath }}/${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis/report.json';
+                  node --require @ff-internal/aria-logger bin/run --handlerModule $(variables.toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ variables.toolAbsolutePath }}/${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
         # Docs
         - ${{ if ne(parameters.taskBuildDocs, false) }}:
           - task: Npm@1
