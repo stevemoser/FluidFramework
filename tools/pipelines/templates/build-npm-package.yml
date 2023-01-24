@@ -434,7 +434,29 @@ stages:
               workingDir: ${{ parameters.buildDirectory }}
               customCommand: 'run bundle-analysis:run'
 
-      # Auth to internal feed
+          # Auth to internal feed
+          - task: Bash@3
+            name: Initialize
+            displayName: Initialize
+            inputs:
+              targetType: 'inline'
+              workingDirectory: ${{ variables.testWorkspace }}
+              script: |
+                echo Initialize package
+                npm init --yes
+
+                echo Generating .npmrc
+                echo "registry=https://registry.npmjs.org" >> ./.npmrc
+                echo "always-auth=false" >> ./.npmrc
+
+                echo "@fluidframework:registry=${{ variables.feed }}" >> ./.npmrc
+                echo "@fluid-experimental:registry=${{ variables.feed }}" >> ./.npmrc
+                echo "@fluid-internal:registry=${{ variables.devFeed }}" >> ./.npmrc
+                echo "@ff-internal:registry=https://pkgs.dev.azure.com/fluidframework/internal/_packaging/build/npm/registry/" >> ./.npmrc
+                echo "@microsoft:registry=https://office.pkgs.visualstudio.com/_packaging/Office/npm/registry/" >> ./.npmrc
+                echo "always-auth=true" >> ./.npmrc
+                cat .npmrc
+
           - task: npmAuthenticate@0
             displayName: 'npm authenticate (internal feed)'
             inputs:
