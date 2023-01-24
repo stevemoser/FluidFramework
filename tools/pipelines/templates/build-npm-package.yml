@@ -113,7 +113,7 @@ variables:
   - name: testWorkspace
     value: $(Pipeline.Workspace)/test
   - name: toolAbsolutePath
-    value: $(Build.SourcesDirectory)/tools/telemetry-generator
+    value:  ${{parameters.buildDirectory }}/tools/telemetry-generator
     readonly: true
 
 stages:
@@ -161,6 +161,8 @@ stages:
                 BuildDoc=${{ parameters.taskBuildDocs }}
                 TestCoverage=$(testCoverage)
                 toolAbsolutePath=$(toolAbsolutePath)
+                variableTestWorkspace=$(variables.testWorkspace)
+                parametersTestWorkspace=$(parameters.testWorkspace)
 
               Publish Parameters:
                 nonScopedPackages=${{ join(', ', parameters.nonScopedPackages) }}
@@ -432,20 +434,33 @@ stages:
               workingDir: ${{ parameters.buildDirectory }}
               customCommand: 'run bundle-analysis:run'
 
+      # Auth to internal feed
+          - task: npmAuthenticate@0
+            displayName: 'npm authenticate (internal feed)'
+            inputs:
+              workingFile: ${{ parameters.testWorkspace }}/.npmrc
+
+          # Auth to Office feed
+          - task: npmAuthenticate@0
+            displayName: 'npm authenticate (office feed)'
+            inputs:
+              workingFile: ${{ variables.testWorkspace }}/.npmrc
+              customEndpoint: 'Office Packages - Readonly'
+
           - task: Bash@3
-            displayName: 'List stuff'
+            displayName: 'List report.json and npmrc'
             inputs:
               targetType: 'inline'
               workingDirectory:  ${{ parameters.buildDirectory }}
               script: |
-                ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis';
                 ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
+                ls -la '${{ variables.testWorkspace }}/.npmrc';
 
           - task: Bash@3
             displayName: 'Prepare telemetry-generator'
             inputs:
               targetType: 'inline'
-              workingDirectory:  ${{ parameters.buildDirectory }}
+              workingDirectory:  ${{ toolAbsolutePath }}
               script: |
                 ls -la '${{ variables.testWorkspace }}';
                 ls -la '${{ parameters.buildDirectory }}';
@@ -464,8 +479,7 @@ stages:
                 echo "Writing the following performance tests results to Aria/Kusto"
                 ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/';
                 ls -la '${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis/report.json';
-                node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis';
-                node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis';
+                node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
 
         # Docs
         - ${{ if ne(parameters.taskBuildDocs, false) }}:
