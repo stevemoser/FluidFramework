@@ -518,11 +518,15 @@ stages:
                   ls -la '../../examples/utils/bundle-size-tests/bundleAnalysis/report.json';
                   echo "Tools Path:"
                   ls -la '../../tools/telemetry-generator';
+                  echo "Tools Path1:"
+                  ls -la '../../tools/telemetry-generator/dist';
                   echo "Tools Path2:"
                   ls -la '../../tools/telemetry-generator/src';
+                  echo "Tools Path25:"
+                  ls -la '../../tools/telemetry-generator/dist/handlers';
                   echo "Tools Path3"
                   ls -la '../../tools/telemetry-generator/src/handlers';
-                  node --require @ff-internal/aria-logger bin/run --handlerModule ../../tools/telemetry-generator/src/handlers/bundleSizeHandler.js --dir '../../artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
+                  node --require @ff-internal/aria-logger bin/run --handlerModule ../../tools/telemetry-generator/dist/handlers/bundleSizeHandler.js --dir '../../artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
         # Docs
         - ${{ if ne(parameters.taskBuildDocs, false) }}:
           - task: Npm@1
