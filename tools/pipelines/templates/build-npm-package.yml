@@ -432,6 +432,14 @@ stages:
               workingDir: ${{ parameters.buildDirectory }}
               customCommand: 'run bundle-analysis:run'
 
+          - task: Bash@3
+            displayName: 'List stuff'
+            inputs:
+              targetType: 'inline'
+              workingDirectory:  ${{ parameters.buildDirectory }}
+              script: |
+                ls -la '${{ parameters.buildDirectory }}/artifacts/';
+
           - task: ExtractFiles@1
             displayName: 'Extract report from bundle'
             inputs:
@@ -439,20 +447,11 @@ stages:
               cleanDestinationFolder: false
               overwriteExistingFiles: true
 
-        # Install test and logger package
-          - task: Npm@1
-            displayName: 'npm install aria logger'
-            inputs:
-              command: 'custom'
-              workingDir: ${{ variables.testWorkspace }}
-              customCommand: 'install @ff-internal/aria-logger'
-              customRegistry: 'useNpmrc'
-
           - task: Bash@3
             displayName: 'Prepare telemetry-generator'
             inputs:
               targetType: 'inline'
-              workingDirectory: $(toolAbsolutePath)
+              workingDirectory:  ${{ parameters.buildDirectory }}
               script: |
                 ls -la '${{ variables.testWorkspace }}';
                 cp ${{ variables.testWorkspace }}/.npmrc . ;
