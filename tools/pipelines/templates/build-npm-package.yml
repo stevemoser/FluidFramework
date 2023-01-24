@@ -414,7 +414,7 @@ stages:
           # See the getZipObjectFromArtifact function in @fluidframework/bundle-size-tools for details about the issue.
           - task: PublishBuildArtifacts@1
             displayName: Publish Artifacts - bundle-analysis
-             condition:
+              condition:
               and(
                 succeeded(),
                 ne(variables['Build.Reason'], 'PullRequest'),
