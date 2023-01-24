@@ -434,6 +434,13 @@ stages:
               workingDir: ${{ parameters.buildDirectory }}
               customCommand: 'run bundle-analysis:run'
 
+          - task: Bash@3
+            displayName: Create test directory
+            inputs:
+              targetType: 'inline'
+              script: |
+                mkdir ${{ variables.testWorkspace }}
+
           # Auth to internal feed
           - task: Bash@3
             name: Initialize
