@@ -516,7 +516,9 @@ stages:
                   ls -la '../../';
                   ls -la '../../artifacts/bundleAnalysis/';
                   ls -la '../../examples/utils/bundle-size-tests/bundleAnalysis/report.json';
-                  node --require @ff-internal/aria-logger bin/run --handlerModule ../../$(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '../../artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
+                  echo "Tools Path:"
+                  ls -la '$(toolAbsolutePath)/src/handlers/';
+                  node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/src/handlers/bundleSizeHandler.js --dir '../../artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
         # Docs
         - ${{ if ne(parameters.taskBuildDocs, false) }}:
           - task: Npm@1
