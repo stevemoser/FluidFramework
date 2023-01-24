@@ -160,9 +160,12 @@ stages:
                 Test=${{ convertToJson(parameters.taskTest) }}
                 BuildDoc=${{ parameters.taskBuildDocs }}
                 TestCoverage=$(testCoverage)
+                parametersTestWorkspace=$(parameters.testWorkspace)
+
+              Variables:
                 toolAbsolutePath=$(toolAbsolutePath)
                 variableTestWorkspace=$(variables.testWorkspace)
-                parametersTestWorkspace=$(parameters.testWorkspace)
+                BuildReason=$(variables['Build.Reason'])
 
               Publish Parameters:
                 nonScopedPackages=${{ join(', ', parameters.nonScopedPackages) }}
@@ -411,12 +414,12 @@ stages:
           # See the getZipObjectFromArtifact function in @fluidframework/bundle-size-tools for details about the issue.
           - task: PublishBuildArtifacts@1
             displayName: Publish Artifacts - bundle-analysis
-            # condition:
-            #  and(
-            #    succeeded(),
-            #    ne(variables['Build.Reason'], 'PullRequest'),
-            #    eq(${{ parameters.taskPublishBundleSizeArtifacts }}, true)
-            #  )
+             condition:
+              and(
+                succeeded(),
+                ne(variables['Build.Reason'], 'PullRequest'),
+                eq(${{ parameters.taskPublishBundleSizeArtifacts }}, true)
+              )
             inputs:
               PathtoPublish: '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis'
               Artifactname: 'bundleAnalysis'
@@ -434,81 +437,81 @@ stages:
               workingDir: ${{ parameters.buildDirectory }}
               customCommand: 'run bundle-analysis:run'
 
-          - task: Bash@3
-            displayName: Create test directory
-            inputs:
-              targetType: 'inline'
-              script: |
-                mkdir ${{ variables.testWorkspace }}
+          - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
+            - task: Bash@3
+              displayName: Create test directory
+              inputs:
+                targetType: 'inline'
+                script: |
+                  mkdir ${{ variables.testWorkspace }}
 
-          # Auth to internal feed
-          - task: Bash@3
-            name: Initialize
-            displayName: Initialize
-            inputs:
-              targetType: 'inline'
-              workingDirectory: ${{ variables.testWorkspace }}
-              script: |
-                echo Initialize package
-                npm init --yes
+            # Auth to internal feed
+            - task: Bash@3
+              name: Initialize
+              displayName: Initialize
+              inputs:
+                targetType: 'inline'
+                workingDirectory: ${{ variables.testWorkspace }}
+                script: |
+                  echo Initialize package
+                  npm init --yes
 
-                echo Generating .npmrc
-                echo "registry=https://registry.npmjs.org" >> ./.npmrc
-                echo "always-auth=false" >> ./.npmrc
+                  echo Generating .npmrc
+                  echo "registry=https://registry.npmjs.org" >> ./.npmrc
+                  echo "always-auth=false" >> ./.npmrc
 
-                echo "@fluidframework:registry=${{ variables.feed }}" >> ./.npmrc
-                echo "@fluid-experimental:registry=${{ variables.feed }}" >> ./.npmrc
-                echo "@fluid-internal:registry=${{ variables.devFeed }}" >> ./.npmrc
-                echo "@ff-internal:registry=https://pkgs.dev.azure.com/fluidframework/internal/_packaging/build/npm/registry/" >> ./.npmrc
-                echo "@microsoft:registry=https://office.pkgs.visualstudio.com/_packaging/Office/npm/registry/" >> ./.npmrc
-                echo "always-auth=true" >> ./.npmrc
-                cat .npmrc
+                  echo "@fluidframework:registry=${{ variables.feed }}" >> ./.npmrc
+                  echo "@fluid-experimental:registry=${{ variables.feed }}" >> ./.npmrc
+                  echo "@fluid-internal:registry=${{ variables.devFeed }}" >> ./.npmrc
+                  echo "@ff-internal:registry=https://pkgs.dev.azure.com/fluidframework/internal/_packaging/build/npm/registry/" >> ./.npmrc
+                  echo "@microsoft:registry=https://office.pkgs.visualstudio.com/_packaging/Office/npm/registry/" >> ./.npmrc
+                  echo "always-auth=true" >> ./.npmrc
+                  cat .npmrc
 
-          - task: npmAuthenticate@0
-            displayName: 'npm authenticate (internal feed)'
-            inputs:
-              workingFile: ${{ variables.testWorkspace }}/.npmrc
+            - task: npmAuthenticate@0
+              displayName: 'npm authenticate (internal feed)'
+              inputs:
+                workingFile: ${{ variables.testWorkspace }}/.npmrc
 
-          - task: npmAuthenticate@0
-            displayName: 'npm authenticate (office feed)'
-            inputs:
-              workingFile: ${{ variables.testWorkspace }}/.npmrc
-              customEndpoint: 'Office Packages - Readonly'
+            - task: npmAuthenticate@0
+              displayName: 'npm authenticate (office feed)'
+              inputs:
+                workingFile: ${{ variables.testWorkspace }}/.npmrc
+                customEndpoint: 'Office Packages - Readonly'
 
-          - task: Bash@3
-            displayName: 'List report.json and npmrc'
-            inputs:
-              targetType: 'inline'
-              workingDirectory:  ${{ parameters.buildDirectory }}
-              script: |
-                ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
-                cat '${{ variables.testWorkspace }}/.npmrc';
+            - task: Bash@3
+              displayName: 'List report.json and npmrc'
+              inputs:
+                targetType: 'inline'
+                workingDirectory:  ${{ parameters.buildDirectory }}
+                script: |
+                  ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
+                  cat '${{ variables.testWorkspace }}/.npmrc';
 
-          - task: Bash@3
-            displayName: 'Prepare telemetry-generator'
-            inputs:
-              targetType: 'inline'
-              workingDirectory:  ${{ variables.toolAbsolutePath }}
-              script: |
-                ls -la '${{ variables.testWorkspace }}';
-                ls -la '${{ parameters.buildDirectory }}';
-                cp ${{ variables.testWorkspace }}/.npmrc . ;
-                npm install @ff-internal/aria-logger;
-                npm i;
-                npm run build:compile;
+            - task: Bash@3
+              displayName: 'Prepare telemetry-generator'
+              inputs:
+                targetType: 'inline'
+                workingDirectory:  ${{ variables.toolAbsolutePath }}
+                script: |
+                  ls -la '${{ variables.testWorkspace }}';
+                  ls -la '${{ parameters.buildDirectory }}';
+                  cp ${{ variables.testWorkspace }}/.npmrc . ;
+                  npm install @ff-internal/aria-logger;
+                  npm i;
+                  npm run build:compile;
 
-          - task: Bash@3
-            displayName: Write measurements to Aria/Kusto - bundle sizes
-            condition: succeededOrFailed()
-            inputs:
-              targetType: 'inline'
-              workingDirectory: ${{ parameters.buildDirectory }}
-              script: |
-                echo "Writing the following performance tests results to Aria/Kusto"
-                ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/';
-                ls -la '${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis/report.json';
-                node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
-
+            - task: Bash@3
+              displayName: Write measurements to Aria/Kusto - bundle sizes
+              condition: succeededOrFailed()
+              inputs:
+                targetType: 'inline'
+                workingDirectory: ${{ variables.toolAbsolutePath }}
+                script: |
+                  echo "Writing the following performance tests results to Aria/Kusto"
+                  ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/';
+                  ls -la '${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis/report.json';
+                  node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
         # Docs
         - ${{ if ne(parameters.taskBuildDocs, false) }}:
           - task: Npm@1
