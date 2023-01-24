@@ -485,6 +485,8 @@ stages:
                 targetType: 'inline'
                 workingDirectory:  ${{ parameters.buildDirectory }}
                 script: |
+                  echo "Build Directory is ${{ parameters.buildDirectory }}"
+                  echo "##vso[task.setvariable variable=testncc]${{ parameters.buildDirectory }}"
                   ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
                   cat '${{ variables.testWorkspace }}/.npmrc';
 
@@ -496,6 +498,7 @@ stages:
                 script: |
                   ls -la '${{ variables.testWorkspace }}';
                   ls -la '${{ parameters.buildDirectory }}';
+                  echo "Build Directory is ${{ parameters.buildDirectory }}"
                   cp ${{ variables.testWorkspace }}/.npmrc . ;
                   npm install @ff-internal/aria-logger;
                   npm i;
@@ -509,9 +512,11 @@ stages:
                 workingDirectory: ${{ variables.toolAbsolutePath }}
                 script: |
                   echo "Writing the following performance tests results to Aria/Kusto"
-                  ls -la '${{ variables.toolAbsolutePath }}/${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/';
-                  ls -la '${{ variables.toolAbsolutePath }}/${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis/report.json';
-                  node --require @ff-internal/aria-logger bin/run --handlerModule $(variables.toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ variables.toolAbsolutePath }}/${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
+                  echo ${{ variables.testncc }}
+                  ls -la ''../../';
+                  ls -la '../../artifacts/bundleAnalysis/';
+                  ls -la '../../examples/utils/bundle-size-tests/bundleAnalysis/report.json';
+                  node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '../../artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
         # Docs
         - ${{ if ne(parameters.taskBuildDocs, false) }}:
           - task: Npm@1
