@@ -435,9 +435,18 @@ stages:
           - task: ExtractFiles@1
             displayName: 'Extract report from bundle'
             inputs:
-              archiveFilePatterns: '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/bundleAnalysis.zip'
+              archiveFilePatterns: '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis.zip'
               cleanDestinationFolder: false
               overwriteExistingFiles: true
+
+        # Install test and logger package
+          - task: Npm@1
+            displayName: 'npm install aria logger'
+            inputs:
+              command: 'custom'
+              workingDir: ${{ parameters.testWorkspace }}
+              customCommand: 'install ${{ parameters.loggerPackage }}'
+              customRegistry: 'useNpmrc'
 
           - task: Bash@3
             displayName: 'Prepare telemetry-generator'
@@ -445,6 +454,8 @@ stages:
               targetType: 'inline'
               workingDirectory: $(toolAbsolutePath)
               script: |
+                ls -la '${{ toolAbsolutePath }}';
+                ls -la '${{ variables.testWorkspace }}';
                 cp ${{ variables.testWorkspace }}/.npmrc . ;
                 npm install @ff-internal/aria-logger;
                 npm i;
@@ -458,9 +469,10 @@ stages:
               workingDirectory: $(toolAbsolutePath)
               script: |
                 echo "Writing the following performance tests results to Aria/Kusto"
-                ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis';
-                ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/bundleAnalysis';
-                node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/bundleAnalysis';
+                ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis*';
+                ls -la '${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis/report.json';
+                node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis';
+                node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis';
 
         # Docs
         - ${{ if ne(parameters.taskBuildDocs, false) }}:
