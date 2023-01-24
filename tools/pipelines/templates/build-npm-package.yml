@@ -462,8 +462,8 @@ stages:
               workingDirectory: ${{ parameters.buildDirectory }}
               script: |
                 echo "Writing the following performance tests results to Aria/Kusto"
-                ls -la '${{ Build.SourcesDirectory }}/artifacts/bundleAnalysis/*';
-                ls -la '${{ Build.SourcesDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis/report.json';
+                ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/';
+                ls -la '${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis/report.json';
                 node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis';
                 node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/bundleSizeHandler.js --dir '${{ parameters.buildDirectory }}/examples/utils/bundle-size-tests/bundleAnalysis';
 
