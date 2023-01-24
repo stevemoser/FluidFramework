@@ -526,7 +526,11 @@ stages:
                   ls -la '../../tools/telemetry-generator/dist/handlers';
                   echo "Tools Path3"
                   ls -la '../../tools/telemetry-generator/src/handlers';
-                  node --require @ff-internal/aria-logger bin/run --handlerModule ../../tools/telemetry-generator/dist/handlers/bundleSizeHandler.js --dir '../../artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
+                  echo "Tools Path4"
+                  ls -la '$(Build.SourcesDirectory)';
+                  echo "Tools Path5"
+                  ls -la '${{parameters.buildDirectory }}';
+                  node --require @ff-internal/aria-logger bin/run --handlerModule $(Build.SourcesDirectory)/tools/telemetry-generator/dist/handlers/bundleSizeHandler.js --dir '../../artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
         # Docs
         - ${{ if ne(parameters.taskBuildDocs, false) }}:
           - task: Npm@1
