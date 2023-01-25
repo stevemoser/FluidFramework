@@ -93,7 +93,6 @@ parameters:
   type: string
   default: 'npm ci --unsafe-perm'
 
-
 trigger: none
 
 variables:
@@ -110,10 +109,8 @@ variables:
       releaseBuildOverride: ${{ parameters.releaseBuildOverride }}
       buildNumberInPatch: ${{ parameters.buildNumberInPatch }}
       nonScopedPackages: ${{ parameters.nonScopedPackages }}
-  - name: testWorkspace
-    value: $(Pipeline.Workspace)/test
   - name: toolAbsolutePath
-    value:  ${{parameters.buildDirectory }}/tools/telemetry-generator
+    value:  $(Build.SourcesDirectory)/tools/telemetry-generator
     readonly: true
 
 stages:
@@ -160,11 +157,9 @@ stages:
                 Test=${{ convertToJson(parameters.taskTest) }}
                 BuildDoc=${{ parameters.taskBuildDocs }}
                 TestCoverage=$(testCoverage)
-                parametersTestWorkspace=$(parameters.testWorkspace)
 
               Variables:
                 toolAbsolutePath=$(toolAbsolutePath)
-                variableTestWorkspace=$(variables.testWorkspace)
                 BuildReason=$(variables['Build.Reason'])
 
               Publish Parameters:
@@ -427,7 +422,7 @@ stages:
 
           - task: Npm@1
             displayName: run bundle size comparison
-            # condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
             env:
               ADO_API_TOKEN: $(System.AccessToken)
               DANGER_GITHUB_API_TOKEN: $(githubPublicRepoSecret)
@@ -437,21 +432,14 @@ stages:
               workingDir: ${{ parameters.buildDirectory }}
               customCommand: 'run bundle-analysis:run'
 
-          - ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-            - task: Bash@3
-              displayName: Create test directory for uploading telemetry
-              inputs:
-                targetType: 'inline'
-                script: |
-                  mkdir ${{ variables.testWorkspace }}
-
+          - ${{ if and(or(eq(variables['Build.Reason'], 'IndividualCI'), eq(variables['Build.Reason'], 'BatchedCI')), eq(variables['System.TeamProject'], 'internal')) }}:
             # Auth to internal feed
             - task: Bash@3
               name: Initialize
-              displayName: Initialize .npmrc
+              displayName: Initialize .npmrc for telemetry logger
               inputs:
                 targetType: 'inline'
-                workingDirectory: ${{ variables.testWorkspace }}
+                workingDirectory: ${{ variables.toolAbsolutePath }}
                 script: |
                   echo Initialize package
                   npm init --yes
@@ -471,39 +459,38 @@ stages:
             - task: npmAuthenticate@0
               displayName: 'npm authenticate (internal feed)'
               inputs:
-                workingFile: ${{ variables.testWorkspace }}/.npmrc
+                workingFile: ${{ variables.toolAbsolutePath }}/.npmrc
 
             - task: npmAuthenticate@0
               displayName: 'npm authenticate (office feed)'
               inputs:
-                workingFile: ${{ variables.testWorkspace }}/.npmrc
+                workingFile: ${{ variables.toolAbsolutePath }}/.npmrc
                 customEndpoint: 'Office Packages - Readonly'
 
             - task: Bash@3
-              displayName: 'List report.json and npmrc'
+              displayName: 'List report.json and .npmrc'
               inputs:
                 targetType: 'inline'
                 workingDirectory:  ${{ parameters.buildDirectory }}
                 script: |
                   echo "Build Directory is ${{ parameters.buildDirectory }}"
                   ls -la '${{ parameters.buildDirectory }}/artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
-                  cat '${{ variables.testWorkspace }}/.npmrc';
+                  cat '${{ variables.toolAbsolutePath }}/.npmrc';
 
             - task: Bash@3
-              displayName: 'Prepare telemetry-generator'
+              displayName: 'Prepare telemetry-generator for bundle size'
               inputs:
                 targetType: 'inline'
                 workingDirectory:  ${{ variables.toolAbsolutePath }}
                 script: |
-                  ls -la '${{ variables.testWorkspace }}';
+                  ls -la '${{ variables.toolAbsolutePath }}';
                   ls -la '${{ parameters.buildDirectory }}';
-                  cp ${{ variables.testWorkspace }}/.npmrc . ;
                   npm install @ff-internal/aria-logger;
                   npm i;
                   npm run build:compile;
 
             - task: Bash@3
-              displayName: Write measurements to Aria/Kusto - bundle sizes
+              displayName: Write bundle sizes measurements to Aria/Kusto
               condition: succeededOrFailed()
               inputs:
                 targetType: 'inline'
@@ -515,7 +502,9 @@ stages:
                   echo "Tools Path:"
                   ls -la '../../tools/telemetry-generator/dist/handlers';
                   node --require @ff-internal/aria-logger bin/run --handlerModule $(Build.SourcesDirectory)/tools/telemetry-generator/dist/handlers/bundleSizeHandler.js --dir '../../artifacts/bundleAnalysis/@fluid-example/bundle-size-tests';
+                  echo "Removing .npmrc"
                   rm ../../tools/telemetry-generator/.npmrc;
+
         # Docs
         - ${{ if ne(parameters.taskBuildDocs, false) }}:
           - task: Npm@1
