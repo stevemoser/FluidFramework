@@ -28,6 +28,7 @@ steps:
       script: |
         pushd "$(Build.SourcesDirectory)/build-tools"
         npm i -g pnpm
+        pnpm config set store-dir $(pnpmStorePath)
         pnpm i
         popd
 
