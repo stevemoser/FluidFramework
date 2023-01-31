@@ -13,7 +13,7 @@ steps:
   - bash: |
       npm i -g pnpm
       pnpm i --frozen-lockfile
-      displayName: 'Install deps'
+    displayName: 'Install deps'
   - bash: |
       # Generate the package/package lock for the lerna project so we would scan it.
       node node_modules/@fluidframework/build-tools/dist/genMonoRepoPackageJson/genMonoRepoPackageJson.js --server
