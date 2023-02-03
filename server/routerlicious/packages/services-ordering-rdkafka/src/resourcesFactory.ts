@@ -14,6 +14,7 @@ import {
 import sillyname from "sillyname";
 import { Provider } from "nconf";
 import { RdkafkaConsumer } from "./rdkafkaConsumer";
+import * as log from "winston";
 
 export interface IRdkafkaResources extends IResources {
     lambdaFactory: IPartitionLambdaFactory;
@@ -61,6 +62,7 @@ export class RdkafkaResourcesFactory implements IResourcesFactory<RdkafkaResourc
         const maxConsumerCommitRetries = config.get("kafka:lib:rdkafkaMaxConsumerCommitRetries");
         const sslCACertFilePath: string = config.get("kafka:lib:sslCACertFilePath");
         const eventHubConnString: string = config.get("kafka:lib:eventHubConnString");
+        log.error(`EventHubConnString in resourceFactory.ts: ${eventHubConnString}`)
 
         // Receive topic and group - for now we will assume an entry in config mapping
         // to the given name. Later though the lambda config will likely be split from the stream config

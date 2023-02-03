@@ -7,6 +7,7 @@ import { EventEmitter } from "events";
 import { IContextErrorData } from "@fluidframework/server-services-core";
 import type * as kafkaTypes from "node-rdkafka";
 import { tryImportNodeRdkafka } from "./tryImport";
+import * as log from "winston";
 
 export interface IKafkaBaseOptions {
     numberOfPartitions: number;
@@ -75,6 +76,8 @@ export abstract class RdkafkaBase extends EventEmitter {
                     "Attempted to configure SASL_SSL for Event Hubs, but rdkafka has not been built to support it. " +
                     "Please make sure OpenSSL is available and build rdkafka again.");
             }
+
+            log.error(`EventHubConnString in resourceFactory.ts: ${eventHubConnString}`)
 
             this.sslOptions = {
                 "security.protocol": "sasl_ssl",
