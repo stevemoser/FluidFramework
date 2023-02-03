@@ -77,7 +77,7 @@ export abstract class RdkafkaBase extends EventEmitter {
                     "Please make sure OpenSSL is available and build rdkafka again.");
             }
 
-            log.error(`EventHubConnString in resourceFactory.ts: ${eventHubConnString}`)
+            log.error(`EventHubConnString in resourceFactory.ts: ${options?.eventHubConnString}`)
 
             this.sslOptions = {
                 "security.protocol": "sasl_ssl",
