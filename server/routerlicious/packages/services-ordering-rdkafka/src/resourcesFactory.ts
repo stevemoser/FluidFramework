@@ -13,8 +13,8 @@ import {
 } from "@fluidframework/server-services-core";
 import sillyname from "sillyname";
 import { Provider } from "nconf";
-import { RdkafkaConsumer } from "./rdkafkaConsumer";
 import * as log from "winston";
+import { RdkafkaConsumer } from "./rdkafkaConsumer";
 
 export interface IRdkafkaResources extends IResources {
     lambdaFactory: IPartitionLambdaFactory;
