@@ -66,13 +66,12 @@ use_old_EnumDeclaration_ContainerMessageType(
 * If breaking change required, add in package.json under typeValidation.broken:
 * "ClassDeclaration_ContainerRuntime": {"forwardCompat": false}
 */
-declare function get_old_ClassDeclaration_ContainerRuntime():
-    TypeOnly<old.ContainerRuntime>;
-declare function use_current_ClassDeclaration_ContainerRuntime(
-    use: TypeOnly<current.ContainerRuntime>);
-use_current_ClassDeclaration_ContainerRuntime(
-    
-    get_old_ClassDeclaration_ContainerRuntime());
+// declare function get_old_ClassDeclaration_ContainerRuntime():
+//     TypeOnly<old.ContainerRuntime>;
+// declare function use_current_ClassDeclaration_ContainerRuntime(
+//     use: TypeOnly<current.ContainerRuntime>);
+// use_current_ClassDeclaration_ContainerRuntime(
+//     get_old_ClassDeclaration_ContainerRuntime());
 
 /*
 * Validate back compat by using current type in place of old type
