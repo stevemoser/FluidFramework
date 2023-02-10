@@ -119,8 +119,9 @@ export async function createAzureClient(config: AzureClientConfig): Promise<Azur
 			};
 		}
 	} else {
+		const user = { name: "blah", ...generateUser() };
 		connectionProps = {
-			tokenProvider: new InsecureTokenProvider("fooBar", generateUser()),
+			tokenProvider: new InsecureTokenProvider("fooBar", user),
 			endpoint: config.connEndpoint,
 			type: "local",
 		};

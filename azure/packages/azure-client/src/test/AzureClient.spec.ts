@@ -16,8 +16,10 @@ import { AzureClient } from "../AzureClient";
 import { AzureLocalConnectionConfig } from "../interfaces";
 
 function createAzureClient(scopes?: ScopeType[]): AzureClient {
+	const user = { name: "blah", ...generateUser() };
+
 	const connectionProps: AzureLocalConnectionConfig = {
-		tokenProvider: new InsecureTokenProvider("fooBar", generateUser(), scopes),
+		tokenProvider: new InsecureTokenProvider("fooBar", user, scopes),
 		endpoint: "http://localhost:7070",
 		type: "local",
 	};
