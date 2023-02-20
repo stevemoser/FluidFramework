@@ -128,6 +128,7 @@
 		"eslint-plugin-unused-imports": "~2.0.0",
 		"globby": "^11",
 		"mocha": "^10.0.0",
+		"nx": "^15.7.2",
 		"nyc": "^15.0.0",
 		"prettier": "~2.6.2",
 		"rimraf": "^2.6.2",
