@@ -1,0 +1,56 @@
+{
+	"tasksRunnerOptions": {
+		"default": {
+			"runner": "@nrwl/nx-cloud",
+			"options": {
+				"parallel": 6,
+				"cacheableOperations": ["build:genver", "build", "compile", "format", "lint"],
+				"accessToken": "ZmY4MzQ3MDUtOWU1YS00MzJiLTg4ZTgtY2M3OWNlZjlhODk4fHJlYWQtd3JpdGU="
+			}
+		}
+	},
+	"namedInputs": {
+		"default": ["{projectRoot}/**/*"],
+		"src": [
+			"test",
+			"{projectRoot}/tsconfig.*",
+			"{projectRoot}/src/**/*",
+			"!{projectRoot}/src/test/**/*"
+		],
+		"test": ["{projectRoot}/package.json", "{projectRoot}/src/test/**/*"],
+		"docs": [
+			"{projectRoot}/package.json",
+			"{projectRoot}/api-extractor.json",
+			"{projectRoot}/src/test/**/*"
+		]
+	},
+	"targetDefaults": {
+		"build": {
+			"inputs": ["src"],
+			"dependsOn": ["^build"],
+			"outputs": [
+				"{projectRoot}/dist",
+				"{projectRoot}/lib",
+				"{projectRoot}/*.tsbuildinfo",
+				"{projectRoot}/oclif.manifest.json"
+			]
+		},
+		"format": {
+			"inputs": ["src"],
+			"dependsOn": [],
+			"outputs": ["{projectRoot}/src/**/*"]
+		},
+		"lint": {
+			"inputs": ["src"],
+			"dependsOn": ["^build"]
+		},
+		"test": {
+			"inputs": ["test"],
+			"dependsOn": ["^build"],
+			"outputs": ["{projectRoot}/dist/test"]
+		},
+		"build:docs": {
+			"dependsOn": ["^build:docs", "build"]
+		}
+	}
+}

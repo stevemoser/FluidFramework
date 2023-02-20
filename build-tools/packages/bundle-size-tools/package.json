@@ -13,21 +13,52 @@
 	"main": "dist/index.js",
 	"module": "lib/index.js",
 	"types": "dist/index.d.ts",
+  "nx": {
+		"namedInputs": {
+			"test": [
+				"{projectRoot}/package.json",
+				"{projectRoot}/test/**/*"
+			]
+		},
+		"targets": {
+			"build": {
+				"dependsOn": [
+					"^build",
+					"build:manifest",
+					"build:readme",
+					"build:diagrams"
+				]
+			},
+			"build:manifest": {
+				"dependsOn": [
+					"clean:manifest"
+				]
+			},
+			"compile": {
+        "dependsOn": [
+					"^compile",
+					"build:genver"
+				],
+				"outputs": [
+					"{projectRoot}/lib",
+					"{projectRoot}/.tsbuildinfo"
+				]
+			}
+		},
+		"includedScripts": [
+			"build",
+			"build:genver"
+		]
+	},
 	"scripts": {
-		"build": "npm run build:genver && concurrently npm:build:compile npm:lint && npm run build:docs",
-		"build:compile": "concurrently npm:tsc npm:build:copy",
-		"build:copy": "copyfiles -u 1 \"src/**/*.fsl\" dist",
+    "build": "pnpm run tsc",
 		"build:docs": "api-extractor run --local",
-		"build:full": "npm run build",
-		"build:full:compile": "npm run build:compile",
 		"build:genver": "gen-version",
 		"ci:build:docs": "api-extractor run",
 		"clean": "rimraf dist *.tsbuildinfo",
-		"eslint": "eslint --format stylish src",
-		"eslint:fix": "eslint --format stylish src --fix",
+		"lint": "eslint --format stylish src",
+		"lint:fix": "eslint --format stylish src --fix",
 		"format": "npm run prettier:fix",
-		"lint": "npm run prettier && npm run eslint",
-		"lint:fix": "npm run prettier:fix && npm run eslint:fix",
 		"prettier": "prettier --check . --ignore-path ../../../.prettierignore",
 		"prettier:fix": "prettier --write . --ignore-path ../../../.prettierignore",
 		"test": "echo \"Error: no test specified\" && exit 1",
