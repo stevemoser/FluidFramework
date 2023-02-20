@@ -46,6 +46,11 @@
 				"dependsOn": [
 					"build:diagrams"
 				]
+			},
+			"build:readme": {
+				"dependsOn": [
+					"^build"
+				]
 			}
 		}
 	},
