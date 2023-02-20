@@ -13,45 +13,8 @@
 	"main": "dist/index.js",
 	"module": "lib/index.js",
 	"types": "dist/index.d.ts",
-  "nx": {
-		"namedInputs": {
-			"test": [
-				"{projectRoot}/package.json",
-				"{projectRoot}/test/**/*"
-			]
-		},
-		"targets": {
-			"build": {
-				"dependsOn": [
-					"^build",
-					"build:manifest",
-					"build:readme",
-					"build:diagrams"
-				]
-			},
-			"build:manifest": {
-				"dependsOn": [
-					"clean:manifest"
-				]
-			},
-			"compile": {
-        "dependsOn": [
-					"^compile",
-					"build:genver"
-				],
-				"outputs": [
-					"{projectRoot}/lib",
-					"{projectRoot}/.tsbuildinfo"
-				]
-			}
-		},
-		"includedScripts": [
-			"build",
-			"build:genver"
-		]
-	},
 	"scripts": {
-    "build": "pnpm run tsc",
+		"build": "pnpm run tsc",
 		"build:docs": "api-extractor run --local",
 		"build:genver": "gen-version",
 		"ci:build:docs": "api-extractor run",
