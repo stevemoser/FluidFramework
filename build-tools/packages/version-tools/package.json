@@ -31,7 +31,7 @@
 		"ci:build:docs": "api-extractor run",
 		"clean": "rimraf dist lib oclif.manifest.json *.tsbuildinfo *.build.log",
 		"clean:manifest": "rimraf oclif.manifest.json",
-		"compile": "concurrently npm:tsc npm:build:copy",
+		"compile": "npm run tsc",
 		"format": "pnpm run prettier:fix",
 		"lint": "eslint --format stylish src",
 		"lint:fix": "eslint --format stylish src --fix --fix-type problem,suggestion,layout",

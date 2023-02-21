@@ -21,6 +21,7 @@
 		"clean:docs": "rimraf **/_api-extractor-temp docs/api/*/**",
 		"clean:nyc": "rimraf nyc/**",
 		"commit": "git-cz",
+		"compile": "nx run-many --target=compile",
 		"format": "nx run-many --target=format",
 		"preinstall": "node ../scripts/only-pnpm.cjs",
 		"install:commitlint": "npm install --global @commitlint/config-conventional",
