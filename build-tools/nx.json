@@ -32,6 +32,10 @@
 				"{projectRoot}/README.md"
 			]
 		},
+		"compile": {
+			"inputs": ["src"],
+			"dependsOn": ["^compile"]
+		},
 		"format": {
 			"inputs": ["src"],
 			"dependsOn": [],
