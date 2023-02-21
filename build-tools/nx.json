@@ -27,7 +27,7 @@
 	"targetDefaults": {
 		"build": {
 			"inputs": ["src"],
-			"dependsOn": ["^build", "build:manifest", "build:readme", "build:diagrams"],
+			"dependsOn": ["^build", "^compile", "build:manifest", "build:diagrams"],
 			"outputs": [
 				"{projectRoot}/dist",
 				"{projectRoot}/lib",
@@ -53,10 +53,10 @@
 			"dependsOn": ["^build:docs", "build"]
 		},
 		"build:manifest": {
-			"dependsOn": ["clean:manifest"]
+			"dependsOn": ["clean:manifest", "build:readme"]
 		},
 		"build:readme": {
-			"dependsOn": ["^build"]
+			"dependsOn": ["^build", "build:readme"]
 		}
 	}
 }

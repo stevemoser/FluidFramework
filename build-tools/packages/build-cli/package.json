@@ -21,23 +21,8 @@
 		"/lib",
 		"/oclif.manifest.json"
 	],
-	"nx": {
-		"namedInputs": {
-			"test": [
-				"{projectRoot}/package.json",
-				"{projectRoot}/test/**/*"
-			]
-		},
-		"targets": {
-			"build:copy": {
-				"dependsOn": [
-					"build:diagrams"
-				]
-			}
-		}
-	},
 	"scripts": {
-		"build": "pnpm run tsc && pnpm run build:copy",
+		"build": "pnpm run build:copy",
 		"build:copy": "copyfiles -u 1 \"src/**/*.fsl\" lib",
 		"build:diagrams": "jssm-viz -i \"./src/machines/*.fsl\"",
 		"build:docs": "api-extractor run --local",
@@ -47,9 +32,10 @@
 		"ci:build:docs": "api-extractor run",
 		"clean": "rimraf dist lib oclif.manifest.json *.tsbuildinfo *.build.log",
 		"clean:manifest": "rimraf oclif.manifest.json",
+		"compile": "tsc",
+		"format": "pnpm run prettier:fix",
 		"lint": "eslint --format stylish src",
 		"lint:fix": "eslint --format stylish src --fix --fix-type problem,suggestion,layout",
-		"format": "pnpm run prettier:fix",
 		"prettier": "prettier --check . --ignore-path ../../../.prettierignore",
 		"prettier:fix": "prettier --write . --ignore-path ../../../.prettierignore",
 		"test": "pnpm run test:mocha",
@@ -147,6 +133,21 @@
 	},
 	"engines": {
 		"node": ">=14.0.0"
+	},
+	"nx": {
+		"namedInputs": {
+			"test": [
+				"{projectRoot}/package.json",
+				"{projectRoot}/test/**/*"
+			]
+		},
+		"targets": {
+			"build:copy": {
+				"dependsOn": [
+					"build:diagrams"
+				]
+			}
+		}
 	},
 	"oclif": {
 		"bin": "flub",

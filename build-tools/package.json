@@ -13,7 +13,7 @@
 	"scripts": {
 		"build": "nx run-many --target=build",
 		"build:ci": "nx run-many --target=build",
-		"docs": "nx run-many --target=build:docs",
+		"build:docs": "nx run-many --target=build:docs",
 		"build:fast": "fluid-build --root .. --buildTools",
 		"build:genver": "nx run-many --target=build:genver",
 		"changelog": "conventional-changelog -p conventionalcommits -i CHANGELOG.md -s -r 2 --commit-path . -t build-tools_v --context lerna.json",
