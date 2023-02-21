@@ -22,8 +22,7 @@
 		"/oclif.manifest.json"
 	],
 	"scripts": {
-		"build": "pnpm run build:genver && pnpm run clean:manifest && concurrently npm:build:compile npm:lint && pnpm run build:docs && pnpm run build:manifest && pnpm run build:readme && pnpm run build:diagrams",
-		"build:compile": "pnpm run tsc && pnpm run build:copy",
+		"build": "pnpm run build:genver && pnpm run clean:manifest && concurrently npm:compile npm:lint && pnpm run build:docs && pnpm run build:manifest && pnpm run build:readme && pnpm run build:diagrams",
 		"build:copy": "copyfiles -u 1 \"src/**/*.fsl\" lib",
 		"build:diagrams": "jssm-viz -i \"./src/machines/*.fsl\"",
 		"build:docs": "api-extractor run --local",
@@ -34,6 +33,7 @@
 		"ci:build:docs": "api-extractor run",
 		"clean": "rimraf dist lib oclif.manifest.json *.tsbuildinfo *.build.log",
 		"clean:manifest": "rimraf oclif.manifest.json",
+		"compile": "pnpm run tsc && pnpm run build:copy",
 		"format": "pnpm run prettier:fix",
 		"lint": "eslint --format stylish src",
 		"lint:fix": "eslint --format stylish src --fix --fix-type problem,suggestion,layout",

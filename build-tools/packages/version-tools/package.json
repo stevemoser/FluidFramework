@@ -22,8 +22,7 @@
 		"/oclif.manifest.json"
 	],
 	"scripts": {
-		"build": "pnpm run build:genver && pnpm run clean:manifest && concurrently \"npm run tsc\" npm:lint && pnpm run build:docs && pnpm run build:manifest && pnpm run build:readme",
-		"build:compile": "concurrently npm:tsc npm:build:copy",
+		"build": "pnpm run build:genver && pnpm run clean:manifest && concurrently npm:tsc npm:lint && pnpm run build:docs && pnpm run build:manifest && pnpm run build:readme",
 		"build:docs": "api-extractor run --local",
 		"build:genver": "gen-version",
 		"build:manifest": "oclif manifest",
@@ -32,6 +31,7 @@
 		"ci:build:docs": "api-extractor run",
 		"clean": "rimraf dist lib oclif.manifest.json *.tsbuildinfo *.build.log",
 		"clean:manifest": "rimraf oclif.manifest.json",
+		"compile": "concurrently npm:tsc npm:build:copy",
 		"format": "pnpm run prettier:fix",
 		"lint": "eslint --format stylish src",
 		"lint:fix": "eslint --format stylish src --fix --fix-type problem,suggestion,layout",

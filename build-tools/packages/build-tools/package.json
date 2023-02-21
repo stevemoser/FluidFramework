@@ -28,6 +28,7 @@
 		"build:genver": "gen-version",
 		"build:test": "tsc --project ./src/test/tsconfig.json",
 		"clean": "rimraf dist lib *.tsbuildinfo *.build.log",
+		"compile": "pnpm run tsc",
 		"debug:layer-check": "node --inspect-brk dist/layerCheck/layerCheck.js --root ../..",
 		"format": "pnpm run prettier:fix",
 		"layer-check": "node dist/layerCheck/layerCheck.js --root ../../..",
