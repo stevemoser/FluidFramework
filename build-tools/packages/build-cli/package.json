@@ -29,27 +29,9 @@
 			]
 		},
 		"targets": {
-			"build": {
-				"dependsOn": [
-					"^build",
-					"build:manifest",
-					"build:readme",
-					"build:diagrams"
-				]
-			},
-			"build:manifest": {
-				"dependsOn": [
-					"clean:manifest"
-				]
-			},
 			"build:copy": {
 				"dependsOn": [
 					"build:diagrams"
-				]
-			},
-			"build:readme": {
-				"dependsOn": [
-					"^build"
 				]
 			}
 		}
