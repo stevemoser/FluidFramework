@@ -11,28 +11,25 @@
 	},
 	"namedInputs": {
 		"default": ["{projectRoot}/**/*"],
+		"test": ["{projectRoot}/package.json", "{projectRoot}/src/test/**/*"],
 		"src": [
 			"test",
 			"{projectRoot}/tsconfig.*",
 			"{projectRoot}/src/**/*",
 			"!{projectRoot}/src/test/**/*"
 		],
-		"test": ["{projectRoot}/package.json", "{projectRoot}/src/test/**/*"],
-		"docs": [
-			"{projectRoot}/package.json",
-			"{projectRoot}/api-extractor.json",
-			"{projectRoot}/src/test/**/*"
-		]
+		"docs": ["src", "{projectRoot}/package.json", "{projectRoot}/api-extractor.json"]
 	},
 	"targetDefaults": {
 		"build": {
 			"inputs": ["src"],
-			"dependsOn": ["^build", "^compile", "build:manifest", "build:diagrams"],
+			"dependsOn": ["^build"],
 			"outputs": [
 				"{projectRoot}/dist",
 				"{projectRoot}/lib",
 				"{projectRoot}/*.tsbuildinfo",
-				"{projectRoot}/oclif.manifest.json"
+				"{projectRoot}/oclif.manifest.json",
+				"{projectRoot}/README.md"
 			]
 		},
 		"format": {

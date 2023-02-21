@@ -14,12 +14,16 @@
 	"module": "lib/index.js",
 	"types": "dist/index.d.ts",
 	"scripts": {
-		"build": "pnpm run tsc",
+		"build": "pnpm run build:genver && concurrently npm:build:compile npm:lint && pnpm run build:docs",
+		"build:compile": "concurrently npm:tsc npm:build:copy",
+		"build:copy": "copyfiles -u 1 \"src/**/*.fsl\" dist",
 		"build:docs": "api-extractor run --local",
+		"build:full": "pnpm run build",
+		"build:full:compile": "pnpm run build:compile",
 		"build:genver": "gen-version",
 		"ci:build:docs": "api-extractor run",
 		"clean": "rimraf dist *.tsbuildinfo",
-		"format": "npm run prettier:fix",
+		"format": "pnpm run prettier:fix",
 		"lint": "eslint --format stylish src",
 		"lint:fix": "eslint --format stylish src --fix",
 		"prettier": "prettier --check . --ignore-path ../../../.prettierignore",
@@ -49,7 +53,6 @@
 		"eslint-plugin-import": "~2.25.4",
 		"eslint-plugin-unicorn": "~40.0.0",
 		"eslint-plugin-unused-imports": "~2.0.0",
-		"nx": "^15.7.2",
 		"prettier": "~2.6.2",
 		"rimraf": "^2.6.2"
 	}
