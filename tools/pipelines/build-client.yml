@@ -27,6 +27,7 @@ parameters:
   type: string
   default: latest
 - name: interdependencyRangeDepType
+  displayName: Range type to use for interdependencies (allowed values are ^, ~ and exact. exact = no range)
   type: string
   default: "^"
 - name: nonScopedPackages
