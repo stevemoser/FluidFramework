@@ -111,11 +111,16 @@ steps:
         echo SETVERSION_VERSION=$SETVERSION_VERSION
         echo SETVERSION_CODEVERSION=$SETVERSION_CODEVERSION
         echo RELEASE_GROUP=$RELEASE_GROUP
+        echo parameters.interdependencyRangeDepType=${{ parameters.interdependencyRangeDepType }}
 
         if [ -f "lerna.json" ]; then
+          if [ "${{ parameters.interdependencyRangeDepType }}" = "exact" ]; then
+            interdependencyRangeDepType=""
+          else
+            interdependencyRangeDepType="${{ parameters.interdependencyRangeDepType }}"
           if [ "$VERSION_RELEASE" = "release" ]; then
-            echo command="flub bump $RELEASE_GROUP --exact $(SetVersion.version) --exactDepType=\"${{ parameters.interdependencyRangeDepType }}\" -xv"
-            flub bump $RELEASE_GROUP --exact $(SetVersion.version) --exactDepType="${{ parameters.interdependencyRangeDepType }}" -xv
+            echo command="flub bump $RELEASE_GROUP --exact $(SetVersion.version) --exactDepType=\"$(interdependencyRangeDepType)\" -xv"
+            flub bump $RELEASE_GROUP --exact $(SetVersion.version) --exactDepType="$(interdependencyRangeDepType)" -xv
           else
             echo command="flub bump $RELEASE_GROUP --exact $(SetVersion.version) --exactDepType=\"\" -xv"
             flub bump $RELEASE_GROUP --exact $(SetVersion.version) --exactDepType="" -xv
