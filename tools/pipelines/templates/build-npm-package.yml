@@ -85,6 +85,10 @@ parameters:
   type: string
   default: repo
 
+- name: interdependencyRangeDepType
+  type: string
+  default: "^"
+
 - name: packageManager
   type: string
   default: npm

@@ -17,7 +17,7 @@ parameters:
   default: repo
 - name: interdependencyRangeDepType
   type: string
-  default: ""
+  default: "^"
 
 # Set version
 steps:
