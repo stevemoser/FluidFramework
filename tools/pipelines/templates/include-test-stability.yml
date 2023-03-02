@@ -36,6 +36,14 @@ parameters:
   type: string
   default: client
 
+- name: packageManager
+  type: string
+  default: npm
+
+- name: packageManagerInstallCommand
+  type: string
+  default: 'npm ci --unsafe-perm'
+
 jobs:
   # Job - Build
   - job: build
@@ -78,24 +86,25 @@ jobs:
       inputs:
         version: 14.x
 
-    - task: Cache@2
-      displayName: Cache pnpm store
-      inputs:
-        # Caches are already scoped to individual pipelines, so no need to include the release group name or tag
-        # in the cache key
-        key: 'pnpm-store | "$(Agent.OS)" | ${{ parameters.buildDirectory }}/pnpm-lock.yaml'
-        path: ${{ variables.pnpmStorePath }}
-        restoreKeys: |
-          pnpm-store | "$(Agent.OS)"
+    - ${{ if eq(parameters.packageManager, 'pnpm') }}:
+      - task: Cache@2
+        displayName: Cache pnpm store
+        inputs:
+          # Caches are already scoped to individual pipelines, so no need to include the release group name or tag
+          # in the cache key
+          key: 'pnpm-store | "$(Agent.OS)" | ${{ parameters.buildDirectory }}/pnpm-lock.yaml'
+          path: ${{ variables.pnpmStorePath }}
+          restoreKeys: |
+            pnpm-store | "$(Agent.OS)"
 
-    - task: Bash@3
-      displayName: Install and configure pnpm
-      inputs:
-        targetType: 'inline'
-        workingDirectory: ${{ parameters.buildDirectory }}
-        script: |
-          npm i -g pnpm
-          pnpm config set store-dir $(pnpmStorePath)
+      - task: Bash@3
+        displayName: Install and configure pnpm
+        inputs:
+          targetType: 'inline'
+          workingDirectory: ${{ parameters.buildDirectory }}
+          script: |
+            npm i -g pnpm
+            pnpm config set store-dir $(pnpmStorePath)
 
     - task: Bash@3
       displayName: Install dependencies
@@ -103,7 +112,7 @@ jobs:
         targetType: 'inline'
         workingDirectory: ${{ parameters.buildDirectory }}
         script: |
-          pnpm i --frozen-lockfile
+          ${{ parameters.packageManagerInstallCommand }}
 
     # Build
     - ${{ if ne(parameters.taskBuild, 'false') }}:
@@ -190,11 +199,23 @@ jobs:
           mergeTestResults: false
         condition: and(succeededOrFailed(), eq(variables['startTest'], 'true'))
 
-    # Prune the pnpm store before it's cached. This removes any deps that are not used by the current build.
-    - task: Bash@3
-      displayName: Prune pnpm store
-      inputs:
-        targetType: 'inline'
-        workingDirectory: ${{ parameters.buildDirectory }}
-        script: |
-          pnpm store prune
+    - ${{ if eq(parameters.packageManager, 'pnpm') }}:
+      # Reset the pnpm-lock.yaml file since it's been modified by the versioning. But for dependency caching we want
+      # the cache key (which is based on the contents of the lockfile) to be the unmodified file. So we reset the
+      # lockfile as the last step so that when the dependency cache is uploaded, the cache key matches what it was
+      # at the beginning of the CI job.
+      - task: Bash@3
+        displayName: Reset lockfile
+        inputs:
+          targetType: 'inline'
+          workingDirectory: ${{ parameters.buildDirectory }}
+          script: |
+            git checkout HEAD -- pnpm-lock.yaml
+      # Prune the pnpm store before it's cached. This removes any deps that are not used by the current build.
+      - task: Bash@3
+        displayName: Prune pnpm store
+        inputs:
+          targetType: 'inline'
+          workingDirectory: ${{ parameters.buildDirectory }}
+          script: |
+            pnpm store prune

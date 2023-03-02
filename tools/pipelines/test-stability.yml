@@ -168,3 +168,5 @@ stages:
           timeoutInMinutes: 360
           taskBuild : ${{ parameters.taskBuild }}
           taskTest: ${{ parameters.taskTest }}
+          packageManagerInstallCommand: 'pnpm i --frozen-lockfile'
+          packageManager: pnpm
