@@ -92,7 +92,7 @@ variables:
   value: 1
 - name: pnpmStorePath
   value: $(Pipeline.Workspace)/.pnpm-store
-- template: templated/include-vars.yml
+- template: templates/include-vars.yml
   parameters:
     publishOverride: ${{ parameters.publishOverride }}
     releaseBuildOverride: ${{ parameters.releaseBuildOverride }}
