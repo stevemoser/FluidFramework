@@ -95,7 +95,7 @@ jobs:
           Computed variables:
             canRelease=${{ variables.canRelease }}
             pnpmStorePath=${{ variables.pnpmStorePath }}
-            release=$(release)"
+            release=$(release)
           "
 
     # Install
