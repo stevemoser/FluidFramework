@@ -51,9 +51,9 @@ parameters:
   default:
   - fluid-framework
 
-#- name: buildNumberInPatch
-#  type: string
-#  default:
+- name: buildNumberInPatch
+  type: string
+  default:
 
 - name: releaseBuildOverride
   displayName: Release Build (default = not released)
