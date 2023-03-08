@@ -48,9 +48,6 @@ parameters:
   type: string
   default: repo
 
-- name: tagName
-  type: string
-
 # If true, then this pipeline will check and format package.json files according to prettier settings.
 - name: usesPrettier
   type: boolean
