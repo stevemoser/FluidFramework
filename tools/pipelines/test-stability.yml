@@ -55,10 +55,6 @@ parameters:
   type: string
   default:
 
-- name: nonScopedPackages
-  type: object
-  default: []
-
 - name: publishOverride
   type: string
 
