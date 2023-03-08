@@ -91,6 +91,11 @@ jobs:
             Lint=${{ parameters.taskLint }}
             Test=${{ convertToJson(parameters.taskTest) }}
             TestCoverage=$(testCoverage)
+
+          Computed variables:
+            canRelease=${{ variables.canRelease }}
+            pnpmStorePath=${{ variables.pnpmStorePath }}
+            release=$(release)"
           "
 
     # Install
