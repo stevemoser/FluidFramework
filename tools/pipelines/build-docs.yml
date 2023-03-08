@@ -247,10 +247,10 @@ stages:
           submodules: false
           clean: true
 
-        # - task: UseNode@1
-        #   displayName: 'Use Node 14.x'
-        #   inputs:
-        #     version: 14.x
+        - task: UseNode@1
+          displayName: 'Use Node 14.x'
+          inputs:
+            version: 14.x
 
         - task: UseDotNet@2
           displayName: 'Use .NET Core 3.x'
