@@ -51,15 +51,27 @@ parameters:
   default:
   - fluid-framework
 
-- name: buildNumberInPatch
-  type: string
-  default:
-
-- name: publishOverride
-  type: string
+#- name: buildNumberInPatch
+#  type: string
+#  default:
 
 - name: releaseBuildOverride
+  displayName: Release Build (default = not released)
   type: string
+  default: none
+  values:
+    - none
+    - prerelease
+    - release
+
+- name: publishOverride
+  displayName: Publish Override (default = based on branch)
+  type: string
+  default: default
+  values:
+    - default
+    - skip
+    - force
 
 
 schedules:
