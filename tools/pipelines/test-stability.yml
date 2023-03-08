@@ -76,6 +76,8 @@ stages:
           poolBuild: ${{ parameters.poolBuild }}
           checkoutSubmodules: ${{ parameters.checkoutSubmodules }}
           timeoutInMinutes: 360
+          tagName: client
+          buildToolsVersionToInstall: ${{ parameters.buildToolsVersionToInstall }}
           taskBuild : ${{ parameters.taskBuild }}
           taskTest: ${{ parameters.taskTest }}
           packageManagerInstallCommand: 'pnpm i --frozen-lockfile'

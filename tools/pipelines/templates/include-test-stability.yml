@@ -44,6 +44,22 @@ parameters:
   type: string
   default: 'npm ci --unsafe-perm'
 
+- name: buildToolsVersionToInstall
+  type: string
+  default: repo
+
+- name: tagName
+  type: string
+
+# If true, then this pipeline will check and format package.json files according to prettier settings.
+- name: usesPrettier
+  type: boolean
+  default: true
+
+- name: buildNumberInPatch
+  type: string
+  default:
+
 jobs:
   # Job - Build
   - job: build
@@ -113,6 +129,15 @@ jobs:
         workingDirectory: ${{ parameters.buildDirectory }}
         script: |
           ${{ parameters.packageManagerInstallCommand }}
+
+    # Set version
+    - template: include-set-package-version.yml
+      parameters:
+        buildDirectory: ${{ parameters.buildDirectory }}
+        buildNumberInPatch: ${{ parameters.buildNumberInPatch }}
+        buildToolsVersionToInstall: ${{ parameters.buildToolsVersionToInstall }}
+        tagName: ${{ parameters.tagName }}
+        usesPrettier: ${{ parameters.usesPrettier }}
 
     # Build
     - ${{ if ne(parameters.taskBuild, 'false') }}:
