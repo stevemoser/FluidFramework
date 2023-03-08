@@ -264,11 +264,13 @@ stages:
           condition: succeededOrFailed()
           inputs:
             Configuration: recommended
+            workingDir: $(Build.SourcesDirectory)/docs
         - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@3
           displayName: 'Publish Guardian Artifacts - All Tools'
           condition: succeededOrFailed()
           inputs:
             ArtifactType: M365
+            workingDir: $(Build.SourcesDirectory)/docs
 
         - task: AssetRetention@3
           displayName: Guardian Asset Retention
@@ -279,6 +281,7 @@ stages:
             AssetNumber: '$(Build.BuildId)'
             IsShipped: false # based on value of arrow.releasedtoproduction variable
             DropsToRetain: 'CodeAnalysisLogs'
+            workingDir: $(Build.SourcesDirectory)/docs
 
         - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@2
           displayName: 'Guardian Break'
