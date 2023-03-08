@@ -51,6 +51,21 @@ parameters:
   default:
   - fluid-framework
 
+- name: buildNumberInPatch
+  type: string
+  default:
+
+- name: nonScopedPackages
+  type: object
+  default: []
+
+- name: publishOverride
+  type: string
+
+- name: releaseBuildOverride
+  type: string
+
+
 schedules:
   - cron: "00 03 * * SUN"
     displayName: Scheduled Tests weekly at Saturday night
@@ -69,6 +84,12 @@ variables:
   value: 1
 - name: pnpmStorePath
   value: $(Pipeline.Workspace)/.pnpm-store
+- template: include-vars.yml
+  parameters:
+    publishOverride: ${{ parameters.publishOverride }}
+    releaseBuildOverride: ${{ parameters.releaseBuildOverride }}
+    buildNumberInPatch: ${{ parameters.buildNumberInPatch }}
+    nonScopedPackages: ${{ parameters.nonScopedPackages }}
 
 stages:
   - ${{ each stageName in parameters.stageNames }}:
