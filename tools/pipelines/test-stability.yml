@@ -117,6 +117,3 @@ stages:
           taskTest: ${{ parameters.taskTest }}
           packageManagerInstallCommand: 'pnpm i --frozen-lockfile'
           packageManager: pnpm
-          publishOverride: ${{ parameters.publishOverride }}
-          releaseBuildOverride: ${{ parameters.releaseBuildOverride }}
-          nonScopedPackages: ${{ parameters.nonScopedPackages }}
