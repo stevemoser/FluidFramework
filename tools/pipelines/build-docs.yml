@@ -247,10 +247,10 @@ stages:
           submodules: false
           clean: true
 
-        - task: UseNode@1
-          displayName: 'Use Node 14.x'
-          inputs:
-            version: 14.x
+        # - task: UseNode@1
+        #   displayName: 'Use Node 14.x'
+        #   inputs:
+        #     version: 14.x
 
         - task: UseDotNet@2
           displayName: 'Use .NET Core 3.x'
@@ -262,7 +262,8 @@ stages:
         - task: securedevelopmentteam.vss-secure-development-tools.build-task-eslint.ESLint@1
           displayName: 'Run ESLint'
           condition: succeededOrFailed()
-
+          inputs:
+            Configuration: recommended
         - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@3
           displayName: 'Publish Guardian Artifacts - All Tools'
           condition: succeededOrFailed()
@@ -286,18 +287,17 @@ stages:
           inputs:
             GdnBreakPolicyMinSev: Warning
             GdnBreakAllTools: true
-            GdnBreakBaselineFiles: '$(Build.SourcesDirectory)/docs/.gdnbaselines'
             GdnBreakGdnToolESLint: true
             GdnBreakGdnToolESLintSeverity: Warning
             GdnBreakPolicy: M365
             GdnBreakOutputBaselineFile: '$(Build.ArtifactStagingDirectory)/'
 
-        - task: PublishPipelineArtifact@1
-          displayName: 'Publish Baselines'
-          condition: eq('${{ parameters.publishGuardianBaselines }}', 'true')
-          inputs:
-            targetPath: '$(Build.ArtifactStagingDirectory)/.gdnbaselines'
-            artifactName: .gdn
+        # - task: PublishPipelineArtifact@1
+        #   displayName: 'Publish Baselines'
+        #   condition: eq('${{ parameters.publishGuardianBaselines }}', 'true')
+        #   inputs:
+        #     targetPath: '$(Build.ArtifactStagingDirectory)/.gdnbaselines'
+        #     artifactName: .gdn
 # END Secure development tasks
 
 - stage: deploy
