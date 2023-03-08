@@ -53,6 +53,16 @@ parameters:
   type: boolean
   default: true
 
+- name: nonScopedPackages
+  displayName: Non-scoped packages to publish
+  type: object
+  default:
+  - fluid-framework
+
+- name: buildNumberInPatch
+  type: string
+  default: 
+
 jobs:
   # Job - Build
   - job: build
