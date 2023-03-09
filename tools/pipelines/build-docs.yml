@@ -78,8 +78,6 @@ variables:
   # skip injected CG detection as we manually trigger it in a parallel job
   - name: skipComponentGovernanceDetection
     value: true
-  - name: pnpmStorePath
-    value: $(Pipeline.Workspace)/.pnpm-store
 
 # no PR triggers
 trigger:
@@ -191,27 +189,12 @@ stages:
           inputs:
             version: 14.x
 
-        - task: Cache@2
-          displayName: Cache pnpm store
+        - task: Npm@1
+          displayName: npm ci
           inputs:
-            key: '"pnpm-store" | "$(Agent.OS)" | $(Build.SourcesDirectory)/docs/pnpm-lock.yaml'
-            path: ${{ variables.pnpmStorePath }}
-
-        - task: Bash@3
-          displayName: Install and configure pnpm
-          inputs:
-            targetType: 'inline'
-            script: |
-              npm i -g pnpm
-              pnpm config set store-dir $(pnpmStorePath)
-
-        - task: Bash@3
-          displayName: Install dependencies
-          inputs:
-            targetType: 'inline'
-            workingDirectory: $(Build.SourcesDirectory)/docs
-            script: |
-              pnpm i --frozen-lockfile
+            command: 'custom'
+            workingDir: '$(Build.SourcesDirectory)/docs'
+            customCommand: 'ci'
 
         - task: Npm@1
           displayName: npm run build
