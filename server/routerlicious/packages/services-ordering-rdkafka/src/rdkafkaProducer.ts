@@ -123,11 +123,15 @@ export class RdkafkaProducer extends RdkafkaBase implements IProducer {
 			...this.sslOptions,
             "metadata.max.age.ms": 180000,
             "retries": 2,
-            "request.timeout.ms": 45000,
 		};
 
 		const producer: kafkaTypes.Producer = this.connectingProducer =
-			new this.kafka.HighLevelProducer(options, this.producerOptions.topicConfig);
+			new this.kafka.HighLevelProducer(
+                options,
+                {
+                    ...this.producerOptions.topicConfig,
+                    "request.timeout.ms": 45000
+                });
 
 		producer.on("ready", () => {
 			this.connectedProducer = producer;
