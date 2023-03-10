@@ -121,6 +121,9 @@ export class RdkafkaProducer extends RdkafkaBase implements IProducer {
 			"batch.num.messages": 10000,
 			...this.producerOptions.additionalOptions,
 			...this.sslOptions,
+            "metadata.max.age.ms": 180000,
+            "retries": 2,
+            "request.timeout.ms": 45000,
 		};
 
 		const producer: kafkaTypes.Producer = this.connectingProducer =

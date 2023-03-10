@@ -117,6 +117,10 @@ export class RdkafkaConsumer extends RdkafkaBase implements IConsumer {
                 true,
             ...this.consumerOptions.additionalOptions,
             ...this.sslOptions,
+            "metadata.max.age.ms": 180000,
+            "heartbeat.interval.ms": 3000,
+            "session.timeout.ms": 45000,
+            "max.poll.interval.ms": 300000,
         };
 
         consumer = this.consumer =
