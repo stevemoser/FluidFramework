@@ -93,9 +93,10 @@ export function generateRuntimeOptions(
 		compressionOptions: [
 			{ minimumBatchSizeInBytes: 500, compressionAlgorithm: CompressionAlgorithms.lz4 },
 		],
-		maxBatchSizeInBytes: [undefined],
+		maxBatchSizeInBytes: [716800],
 		enableOpReentryCheck: [true],
-		chunkSizeInBytes: [undefined],
+		// Compressed payloads exceeding this size will be chunked into messages of exactly this size
+		chunkSizeInBytes: [204800],
 	};
 
 	return generatePairwiseOptions<IContainerRuntimeOptions>(

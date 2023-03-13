@@ -12,13 +12,15 @@ import {
 	LocalFieldKey,
 	symbolFromKey,
 } from "../../core";
-import { brand, JsonCompatibleReadOnly } from "../../util";
+import { brand, JsonCompatibleReadOnly, Mutable } from "../../util";
+import { ChangesetLocalId } from "./crossFieldQueries";
 import {
-	ChangesetLocalId,
 	FieldChangeMap,
 	ModularChangeset,
 	NodeChangeset,
+	RevisionInfo,
 	ValueChange,
+	ValueConstraint,
 } from "./fieldChangeHandler";
 import { FieldKind } from "./fieldKind";
 import { getChangeHandler } from "./modularChangeFamily";
@@ -29,11 +31,13 @@ import { getChangeHandler } from "./modularChangeFamily";
 interface EncodedNodeChangeset {
 	valueChange?: ValueChange;
 	fieldChanges?: EncodedFieldChangeMap;
+	valueConstraint?: ValueConstraint;
 }
 
 interface EncodedModularChangeset {
 	maxId?: ChangesetLocalId;
 	changes: EncodedFieldChangeMap;
+	revisions?: readonly RevisionInfo[];
 }
 
 /**
@@ -62,6 +66,7 @@ export function encodeForJsonFormat0(
 ): EncodedModularChangeset & JsonCompatibleReadOnly {
 	return {
 		maxId: change.maxId,
+		revisions: change.revisions as readonly RevisionInfo[] & JsonCompatibleReadOnly,
 		changes: encodeFieldChangesForJson(fieldKinds, change.changes),
 	};
 }
@@ -108,6 +113,10 @@ function encodeNodeChangesForJson(
 		encodedChange.fieldChanges = encodedFieldChanges as unknown as EncodedFieldChangeMap;
 	}
 
+	if (change.valueConstraint !== undefined) {
+		encodedChange.valueConstraint = change.valueConstraint;
+	}
+
 	return encodedChange;
 }
 
@@ -116,9 +125,12 @@ export function decodeJsonFormat0(
 	change: JsonCompatibleReadOnly,
 ): ModularChangeset {
 	const encodedChange = change as unknown as EncodedModularChangeset;
-	const decoded: ModularChangeset = {
+	const decoded: Mutable<ModularChangeset> = {
 		changes: decodeFieldChangesFromJson(fieldKinds, encodedChange.changes),
 	};
+	if (encodedChange.revisions !== undefined) {
+		decoded.revisions = encodedChange.revisions;
+	}
 	if (encodedChange.maxId !== undefined) {
 		decoded.maxId = encodedChange.maxId;
 	}
@@ -165,6 +177,10 @@ function decodeNodeChangesetFromJson(
 			fieldKinds,
 			encodedChange.fieldChanges,
 		);
+	}
+
+	if (encodedChange.valueConstraint !== undefined) {
+		decodedChange.valueConstraint = encodedChange.valueConstraint;
 	}
 
 	return decodedChange;

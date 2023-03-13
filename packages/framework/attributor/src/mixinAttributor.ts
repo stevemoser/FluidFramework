@@ -11,6 +11,8 @@ import { IAudience, IContainerContext, IDeltaManager } from "@fluidframework/con
 import { ContainerRuntime } from "@fluidframework/container-runtime";
 import type { IContainerRuntimeOptions } from "@fluidframework/container-runtime";
 import {
+	AttributionInfo,
+	AttributionKey,
 	ISummaryTreeWithStats,
 	ITelemetryContext,
 	NamedFluidDataStoreRegistryEntries,
@@ -21,13 +23,7 @@ import { IRequest, IResponse, FluidObject } from "@fluidframework/core-interface
 import { assert, bufferToString, unreachableCase } from "@fluidframework/common-utils";
 import { UsageError } from "@fluidframework/container-utils";
 import { loggerToMonitoringContext } from "@fluidframework/telemetry-utils";
-import {
-	AttributionInfo,
-	AttributionKey,
-	Attributor,
-	IAttributor,
-	OpStreamAttributor,
-} from "./attributor";
+import { Attributor, IAttributor, OpStreamAttributor } from "./attributor";
 import { AttributorSerializer, chain, deltaEncoder, Encoder } from "./encoders";
 import { makeLZ4Encoder } from "./lz4Encoder";
 
@@ -72,10 +68,17 @@ export interface IRuntimeAttributor extends IProvideRuntimeAttributor {
 	 * @returns - Whether any AttributionInfo exists for the provided key.
 	 */
 	has(key: AttributionKey): boolean;
+
+	/**
+	 * @returns - Whether the runtime is currently tracking attribution information for the loaded container.
+	 * See {@link mixinAttributor} for more details on when this happens.
+	 */
+	readonly isEnabled: boolean;
 }
 
 /**
- * @returns an IRuntimeAttributor for usage with `mixinAttributor`. The attributor will only be populated
+ * @returns an IRuntimeAttributor for usage with `mixinAttributor`. The attributor will only be populated with data
+ * once it's passed via scope to a container runtime load flow. See {@link mixinAttributor}.
  * @alpha
  */
 export function createRuntimeAttributor(): IRuntimeAttributor {
@@ -127,6 +130,12 @@ export const mixinAttributor = (Base: typeof ContainerRuntime = ContainerRuntime
 				0x508 /* Audience must exist when instantiating attribution-providing runtime */,
 			);
 
+			const mc = loggerToMonitoringContext(context.taggedLogger);
+			const shouldTrackAttribution = mc.config.getBoolean(enableOnNewFileKey) ?? false;
+			if (shouldTrackAttribution) {
+				(context.options.attribution ??= {}).track = true;
+			}
+
 			const runtime = (await Base.load(
 				context,
 				registryEntries,
@@ -138,8 +147,6 @@ export const mixinAttributor = (Base: typeof ContainerRuntime = ContainerRuntime
 			)) as ContainerRuntimeWithAttributor;
 			runtime.runtimeAttributor = runtimeAttributor as RuntimeAttributor;
 
-			const mc = loggerToMonitoringContext(runtime.logger);
-
 			// Note: this fetches attribution blobs relatively eagerly in the load flow; we may want to optimize
 			// this to avoid blocking on such information until application actually requests some op-based attribution
 			// info or we need to summarize. All that really needs to happen immediately is to start recording
@@ -149,7 +156,7 @@ export const mixinAttributor = (Base: typeof ContainerRuntime = ContainerRuntime
 				audience,
 				baseSnapshot,
 				async (id) => runtime.storage.readBlob(id),
-				mc.config.getBoolean(enableOnNewFileKey) ?? false,
+				shouldTrackAttribution,
 			);
 			return runtime;
 		}
@@ -181,10 +188,31 @@ class RuntimeAttributor implements IRuntimeAttributor {
 			0x509 /* RuntimeAttributor must be initialized before getAttributionInfo can be called */,
 		);
 
+		if (key.type === "detached") {
+			throw new Error("Attribution of detached keys is not yet supported.");
+		}
+
+		if (key.type === "local") {
+			// Note: we can *almost* orchestrate this correctly with internal-only changes by looking up the current
+			// client id in the audience. However, for read->write client transition, the container might have not yet
+			// received a client id. This is left as a TODO as it might be more easily solved once the detached case
+			// is settled (e.g. if it's reasonable for the host to know the current user information at container
+			// creation time, we could just use that here as well).
+			throw new Error("Attribution of local keys is not yet supported.");
+		}
+
 		return this.opAttributor.getAttributionInfo(key.seq);
 	}
 
 	public has(key: AttributionKey): boolean {
+		if (key.type === "detached") {
+			return false;
+		}
+
+		if (key.type === "local") {
+			return false;
+		}
+
 		return this.opAttributor?.tryGetAttributionInfo(key.seq) !== undefined;
 	}
 
@@ -194,7 +222,7 @@ class RuntimeAttributor implements IRuntimeAttributor {
 	};
 
 	private opAttributor: IAttributor | undefined;
-	private skipSummary = true;
+	public isEnabled = false;
 
 	public async initialize(
 		deltaManager: IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>,
@@ -215,7 +243,7 @@ class RuntimeAttributor implements IRuntimeAttributor {
 			return;
 		}
 
-		this.skipSummary = false;
+		this.isEnabled = true;
 		this.encoder = chain(
 			new AttributorSerializer(
 				(entries) => new OpStreamAttributor(deltaManager, audience, entries),
@@ -239,7 +267,7 @@ class RuntimeAttributor implements IRuntimeAttributor {
 	}
 
 	public summarize(): ISummaryTreeWithStats | undefined {
-		if (this.skipSummary) {
+		if (!this.isEnabled) {
 			// Loaded existing document without attributor data: avoid injecting any data.
 			return undefined;
 		}

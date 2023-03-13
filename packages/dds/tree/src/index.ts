@@ -30,6 +30,9 @@ export {
 	JsonableTree,
 	Delta,
 	rootFieldKey,
+	rootField,
+	rootFieldKeySymbol,
+	fieldSchema,
 	FieldScope,
 	GlobalFieldKeySymbol,
 	symbolFromKey,
@@ -52,6 +55,7 @@ export {
 	LocalFieldKey,
 	GlobalFieldKey,
 	TreeSchemaIdentifier,
+	TreeSchemaBuilder,
 	NamedTreeSchema,
 	Named,
 	FieldSchema,
@@ -68,8 +72,6 @@ export {
 	ProgressiveEditBuilder,
 	ProgressiveEditBuilderBase,
 	ChangeRebaser,
-	ICheckout,
-	TransactionResult,
 	FieldAnchor,
 	RevisionTag,
 	TaggedChange,
@@ -78,6 +80,16 @@ export {
 	SchemaEvents,
 	ForestEvents,
 	PathRootPrefix,
+	AnchorKeyBrand,
+	AnchorSlot,
+	BrandedKey,
+	BrandedKeyContent,
+	BrandedMapSubset,
+	AnchorNode,
+	anchorSlot,
+	UpPathDefault,
+	AnchorEvents,
+	FieldKindSpecifier,
 } from "./core";
 
 export {
@@ -99,9 +111,19 @@ export {
 	JsonCompatible,
 	JsonCompatibleObject,
 	NestedMap,
+	fail,
+	TransactionResult,
 } from "./util";
 
-export { Events, IsEvent, ISubscribable, createEmitter, IEmitter } from "./events";
+export {
+	Events,
+	IsEvent,
+	ISubscribable,
+	createEmitter,
+	IEmitter,
+	NoListenersCallback,
+	HasListeners,
+} from "./events";
 
 export {
 	cursorToJsonObject,
@@ -124,6 +146,7 @@ export {
 	ModularChangeFamily,
 	ModularChangeset,
 	ModularEditBuilder,
+	EditDescription,
 	FieldChangeHandler,
 	FieldEditor,
 	FieldChangeRebaser,
@@ -140,6 +163,11 @@ export {
 	NodeChangeRebaser,
 	NodeChangeEncoder,
 	NodeChangeDecoder,
+	CrossFieldManager,
+	CrossFieldTarget,
+	RevisionIndexer,
+	RevisionMetadataSource,
+	RevisionInfo,
 	FieldKind,
 	Multiplicity,
 	isNeverField,
@@ -177,6 +205,41 @@ export {
 	SequenceFieldEditBuilder,
 	prefixPath,
 	prefixFieldPath,
+	singleTextCursor,
+	namedTreeSchema,
+	singleStackTreeCursor,
+	CursorAdapter,
+	CursorWithNode,
+	parentField,
+	ValueConstraint,
+	TypedSchema,
+	SchemaAware,
+	ArrayLikeMut,
 } from "./feature-libraries";
 
-export { ISharedTree, SharedTreeFactory } from "./shared-tree";
+// Export subset of FieldKinds in an API-Extractor compatible way:
+import {
+	FieldEditor,
+	FieldKind,
+	FieldKinds as FieldKindsOriginal,
+	Multiplicity,
+} from "./feature-libraries";
+
+/**
+ * @alpha
+ */
+export const FieldKinds = {
+	value: FieldKindsOriginal.value as FieldKind<FieldEditor<any>, Multiplicity.Value>,
+	optional: FieldKindsOriginal.optional as FieldKind<FieldEditor<any>, Multiplicity.Optional>,
+	sequence: FieldKindsOriginal.sequence as FieldKind<FieldEditor<any>, Multiplicity.Sequence>,
+} as const;
+
+export {
+	ISharedTree,
+	ISharedTreeCheckout,
+	ISharedTreeCheckoutFork,
+	runSynchronous,
+	SharedTreeFactory,
+} from "./shared-tree";
+
+export { StableId, UuidString } from "./id-compressor";

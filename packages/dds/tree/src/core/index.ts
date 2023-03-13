@@ -37,6 +37,7 @@ export {
 	JsonableTree,
 	Delta,
 	rootFieldKey,
+	rootField,
 	FieldScope,
 	GlobalFieldKeySymbol,
 	symbolFromKey,
@@ -44,6 +45,7 @@ export {
 	ITreeCursor,
 	CursorLocationType,
 	ITreeCursorSynchronous,
+	castCursorToSynchronous,
 	GenericFieldsNode,
 	AnchorLocator,
 	genericTreeKeys,
@@ -71,6 +73,19 @@ export {
 	forEachNode,
 	forEachField,
 	PathRootPrefix,
+	isSkipMark,
+	emptyDelta,
+	AnchorKeyBrand,
+	AnchorSlot,
+	BrandedKey,
+	BrandedKeyContent,
+	BrandedMapSubset,
+	AnchorNode,
+	anchorSlot,
+	UpPathDefault,
+	inCursorField,
+	inCursorNode,
+	AnchorEvents,
 } from "./tree";
 
 export {
@@ -99,6 +114,7 @@ export {
 	TreeSchema,
 	StoredSchemaRepository,
 	FieldKindIdentifier,
+	FieldKindSpecifier,
 	TreeTypeSet,
 	SchemaData,
 	SchemaPolicy,
@@ -123,22 +139,23 @@ export {
 } from "./change-family";
 
 export {
-	Rebaser,
 	ChangeRebaser,
+	findAncestor,
+	findCommonAncestor,
+	GraphCommit,
 	RevisionTag,
 	TaggedChange,
-	ChangesetFromChangeRebaser,
 	makeAnonChange,
 	tagChange,
 	noFailure,
 	OutputType,
 	verifyChangeRebaser,
-	tagInverse,
+	tagRollbackInverse,
+	SessionId,
+	mintCommit,
+	mintRevisionTag,
+	Rebaser,
 } from "./rebase";
-
-export { ICheckout, TransactionResult } from "./checkout";
-
-export { Checkout } from "./transaction";
 
 export {
 	Adapters,
@@ -150,13 +167,13 @@ export {
 } from "./schema-view";
 
 export {
-	Branch,
 	Commit,
 	EditManager,
-	MutableSummaryData,
-	ReadonlySummaryData,
+	minimumPossibleSequenceNumber,
 	SeqNumber,
-	SessionId,
+	SequencedCommit,
+	SummarySessionBranch as SummaryBranch,
+	SummaryData,
 } from "./edit-manager";
 
 export { RepairDataStore, ReadonlyRepairDataStore } from "./repair";

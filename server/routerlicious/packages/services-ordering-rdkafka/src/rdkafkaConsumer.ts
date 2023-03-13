@@ -93,11 +93,19 @@ export class RdkafkaConsumer extends RdkafkaBase implements IConsumer {
             return;
         }
 
-        const zookeeperEndpoints = this.endpoints.zooKeeper;
-        if (!this.consumerOptions.eventHubConnString && zookeeperEndpoints && zookeeperEndpoints.length > 0 && this.consumerOptions.zooKeeperClientConstructor) {
-            const zooKeeperEndpoint = zookeeperEndpoints[Math.floor(Math.random() % zookeeperEndpoints.length)];
-            this.zooKeeperClient = new this.consumerOptions.zooKeeperClientConstructor(zooKeeperEndpoint);
-        }
+		const zookeeperEndpoints = this.endpoints.zooKeeper;
+		if (
+            !this.consumerOptions.eventHubConnString &&
+			zookeeperEndpoints &&
+			zookeeperEndpoints.length > 0 &&
+			this.consumerOptions.zooKeeperClientConstructor
+		) {
+			const zooKeeperEndpoint =
+				zookeeperEndpoints[Math.floor(Math.random() % zookeeperEndpoints.length)];
+			this.zooKeeperClient = new this.consumerOptions.zooKeeperClientConstructor(
+				zooKeeperEndpoint,
+			);
+		}
 
         // eslint-disable-next-line prefer-const
         let consumer: kafkaTypes.KafkaConsumer;
@@ -112,9 +120,10 @@ export class RdkafkaConsumer extends RdkafkaBase implements IConsumer {
             "fetch.min.bytes": 1,
             "fetch.max.bytes": 1024 * 1024,
             "offset_commit_cb": true,
-            "rebalance_cb": this.consumerOptions.optimizedRebalance ?
-                (err: kafkaTypes.LibrdKafkaError, assignments: kafkaTypes.Assignment[]) => this.rebalance(consumer, err, assignments) :
-                true,
+            "rebalance_cb": this.consumerOptions.optimizedRebalance
+                ? (err: kafkaTypes.LibrdKafkaError, assignments: kafkaTypes.Assignment[]) =>
+                    this.rebalance(consumer, err, assignments)
+                : true,
             ...this.consumerOptions.additionalOptions,
             ...this.sslOptions,
             "metadata.max.age.ms": 180000,
