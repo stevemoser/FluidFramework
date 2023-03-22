@@ -5,12 +5,11 @@
 
 import * as crypto from "crypto";
 import {
-	IDocument,
 	IDocumentStorage,
 	IThrottler,
 	ITenantManager,
 	ICache,
-	ICollection,
+	IDocumentRepository,
 } from "@fluidframework/server-services-core";
 import {
 	verifyStorageToken,
@@ -37,7 +36,7 @@ export function create(
 	singleUseTokenCache: ICache,
 	config: Provider,
 	tenantManager: ITenantManager,
-	documentsCollection: ICollection<IDocument>,
+	documentRepository: IDocumentRepository,
 ): Router {
 	const router: Router = Router();
 	const externalOrdererUrl: string = config.get("worker:serverUrl");
@@ -194,7 +193,7 @@ export function create(
 				externalDeltaStreamUrl,
 				tenantId,
 				documentId,
-				documentsCollection,
+				documentRepository,
 				sessionStickinessDurationMs,
 			);
 			handleResponse(session, response, false);
