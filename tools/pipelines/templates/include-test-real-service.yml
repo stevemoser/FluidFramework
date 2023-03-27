@@ -349,6 +349,6 @@ jobs:
       # Log Test Failures
       - template: include-log-test-failures.yml
         parameters:
-          buildDirectory: ${{ variables.testPackageDir }}
+          buildDirectory: .
 
       - ${{ parameters.additionalSteps }}
