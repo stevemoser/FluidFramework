@@ -4,6 +4,8 @@
 parameters:
 - name: buildDirectory
   type: string
+- name: testReportDirectory
+  type: string
 
 # Log test failures
 steps:
@@ -12,7 +14,7 @@ steps:
     displayName: 'Check for nyc directory'
     inputs:
       targetType: 'inline'
-      workingDirectory: ${{ parameters.buildDirectory }}
+      workingDirectory: ${{ parameters.testReportDirectory }}
       script: |
         test -d nyc && echo '##vso[task.setvariable variable=TestReportsExists;]true' || echo 'No nyc directory'
     condition: succeededOrFailed()

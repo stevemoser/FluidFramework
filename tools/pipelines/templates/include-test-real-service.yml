@@ -350,5 +350,6 @@ jobs:
       - template: include-log-test-failures.yml
         parameters:
           buildDirectory: .
+          testReportDirectory: ${{ variables.testPackageDir }}
 
       - ${{ parameters.additionalSteps }}
