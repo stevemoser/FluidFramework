@@ -347,9 +347,36 @@ jobs:
         condition: succeededOrFailed()
 
       # Log Test Failures
-      - template: include-log-test-failures.yml
-        parameters:
-          buildDirectory: .
-          testReportDirectory: ${{ parameters.testWorkspace }}
+      # - template: include-log-test-failures.yml
+      #   parameters:
+      #     buildDirectory: .
+      #     testReportDirectory: ${{ parameters.testWorkspace }}
+
+      steps:
+        # Check Published Tests
+        - task: Bash@3
+          displayName: 'Check for nyc directory'
+          inputs:
+            targetType: 'inline'
+            workingDirectory: ${{ variables.testPackageDir }}
+            script: |
+              test -d nyc && echo '##vso[task.setvariable variable=TestReportsExists;]true' || echo 'No nyc directory'
+          condition: succeededOrFailed()
+
+        # Console Log Failed Tests
+        - task: Bash@3
+          displayName: Log Failed Tests
+          inputs:
+            targetType: inline
+            script: |
+              failedTests=$(node report-parser.js '$(Build.SourcesDirectory)/nyc')
+              if [ $failedTests == [] ]
+              then
+                echo "No failed tests."
+              else
+                echo "##[error] $failedTests"
+              fi
+            workingDirectory: $(Build.SourcesDirectory)/scripts
+          condition: succeededOrFailed()
 
       - ${{ parameters.additionalSteps }}
