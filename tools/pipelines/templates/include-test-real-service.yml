@@ -375,7 +375,7 @@ jobs:
             else
               echo "##[error] $failedTests"
             fi
-          workingDirectory: $(Build.SourcesDirectory)/scripts
+          workingDir: $(Build.SourcesDirectory)/scripts
         condition: succeededOrFailed()
 
       - ${{ parameters.additionalSteps }}
