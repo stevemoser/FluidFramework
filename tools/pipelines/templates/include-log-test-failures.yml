@@ -24,6 +24,7 @@ steps:
     inputs:
       script: |
         echo  '$(System.DefaultWorkingDirectory)'
+        echo  ${{ parameters.testReportDirectory }}
         dir
     condition: succeededOrFailed()
 
@@ -40,5 +41,5 @@ steps:
         else
           echo "##[error] $failedTests"
         fi
-      workingDirectory: $(Build.SourcesDirectory)/scripts
+      workingDirectory: ${{ parameters.testReportDirectory }}/scripts
     condition: succeededOrFailed()

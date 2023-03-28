@@ -350,6 +350,6 @@ jobs:
       - template: include-log-test-failures.yml
         parameters:
           buildDirectory: .
-          testReportDirectory: ${{ parameters.testWorkspace }}/node_modules/${{ parameters.testPackage }}
+          testReportDirectory: ${{ parameters.testWorkspace }}
 
       - ${{ parameters.additionalSteps }}
