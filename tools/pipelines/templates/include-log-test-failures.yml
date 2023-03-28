@@ -25,6 +25,7 @@ steps:
       script: |
         echo  '$(System.DefaultWorkingDirectory)'
         dir
+    condition: succeededOrFailed()
 
   # Console Log Failed Tests
   - task: Bash@3
