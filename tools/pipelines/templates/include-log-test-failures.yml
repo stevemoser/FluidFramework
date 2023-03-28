@@ -33,4 +33,3 @@ steps:
           echo "##[error] $failedTests"
         fi
       workingDirectory: scripts
-    condition: eq(variables['TestReportsExists'], 'true')
