@@ -32,5 +32,5 @@ steps:
         else
           echo "##[error] $failedTests"
         fi
-      workingDirectory: $(Agent.BuildDirectory)/scripts
+      workingDirectory: $(Build.SourcesDirectory)/scripts
     condition: succeededOrFailed()
