@@ -33,3 +33,4 @@ steps:
           echo "##[error] $failedTests"
         fi
       workingDirectory: scripts
+    condition: succeededOrFailed()
