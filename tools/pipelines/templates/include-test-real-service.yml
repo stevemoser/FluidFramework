@@ -362,6 +362,16 @@ jobs:
             test -d nyc && echo '##vso[task.setvariable variable=TestReportsExists;]true' || echo 'No nyc directory'
         condition: succeededOrFailed()
 
+      - task: CmdLine@2
+        displayName: 'Check folders'
+        inputs:
+          script: |
+            echo  '$(System.DefaultWorkingDirectory)'
+            echo  ${{ parameters.testReportDirectory }}
+            dir
+          workingDirectory: $(Pipeline.Workspace)
+        condition: succeededOrFailed()
+
       # Console Log Failed Tests
       - task: Bash@3
         displayName: Log Failed Tests
@@ -375,7 +385,7 @@ jobs:
             else
               echo "##[error] $failedTests"
             fi
-          workingDir: $(Build.SourcesDirectory)/scripts
+          workingDir: $(Pipeline.Workspace)/scripts
         condition: succeededOrFailed()
 
       - ${{ parameters.additionalSteps }}
