@@ -19,12 +19,12 @@ steps:
         test -d nyc && echo '##vso[task.setvariable variable=TestReportsExists;]true' || echo 'No nyc directory'
     condition: succeededOrFailed()
 
-- task: CmdLine@2
-  displayName: 'Check folders'
-  inputs:
-    script: |
-      echo  '$(System.DefaultWorkingDirectory)'
-      dir
+  - task: CmdLine@2
+    displayName: 'Check folders'
+    inputs:
+      script: |
+        echo  '$(System.DefaultWorkingDirectory)'
+        dir
 
   # Console Log Failed Tests
   - task: Bash@3
