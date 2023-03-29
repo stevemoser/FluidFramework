@@ -86,6 +86,7 @@ export {
 	inCursorField,
 	inCursorNode,
 	AnchorEvents,
+	AnchorSetRootEvents,
 } from "./tree";
 
 export {
@@ -134,6 +135,7 @@ export {
 export {
 	ChangeEncoder,
 	ChangeFamily,
+	ChangeFamilyEditor,
 	ProgressiveEditBuilder,
 	ProgressiveEditBuilderBase,
 } from "./change-family";
@@ -164,6 +166,7 @@ export {
 	Compatibility,
 	FieldAdapter,
 	TreeAdapter,
+	AllowedUpdateType,
 } from "./schema-view";
 
 export {
