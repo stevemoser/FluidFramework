@@ -3,16 +3,18 @@
  * Licensed under the MIT License.
  */
 
-// TODO: re-enable rule and fix violations before merging into main
+// TODO: re-enable rule and fix violations
 /* eslint-disable no-restricted-syntax */
 
 export * from "./client-data-views";
-export * from "./data-object-views";
 
 export * from "./AudienceView";
-export * from "./ClientDebugView";
-export * from "./ContainerDataView";
-export * from "./ContainerSelectionDropdown";
-export * from "./ContainerStateView";
+export * from "./ContainerView";
+export * from "./ContainerHistoryView";
+export * from "./ContainerSummaryView";
+export * from "./LandingView";
+export * from "./Menu";
+export * from "./TelemetryView";
+export * from "./Waiting";
 
 /* eslint-enable no-restricted-syntax */

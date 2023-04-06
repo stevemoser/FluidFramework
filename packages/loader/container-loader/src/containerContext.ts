@@ -4,7 +4,7 @@
  */
 
 import { ITelemetryLogger } from "@fluidframework/common-definitions";
-import { LazyPromise } from "@fluidframework/common-utils";
+import { assert, LazyPromise, TypedEventEmitter } from "@fluidframework/common-utils";
 import {
 	IAudience,
 	IContainerContext,
@@ -21,7 +21,6 @@ import {
 	IProvideFluidCodeDetailsComparer,
 	ICodeDetailsLoader,
 	IFluidModuleWithDetails,
-	ISnapshotTreeWithBlobContents,
 	IBatchMessage,
 } from "@fluidframework/container-definitions";
 import { IRequest, IResponse, FluidObject } from "@fluidframework/core-interfaces";
@@ -42,9 +41,20 @@ import {
 	ISummaryContent,
 } from "@fluidframework/protocol-definitions";
 import { PerformanceEvent } from "@fluidframework/telemetry-utils";
+import { UsageError } from "@fluidframework/container-utils";
 import { Container } from "./container";
 
 const PackageNotFactoryError = "Code package does not implement IRuntimeFactory";
+
+/**
+ * Events that {@link ContainerContext} can emit through its lifecycle.
+ *
+ * "runtimeInstantiated" - When an {@link @fluidframework/container-definitions#IRuntime} has been instantiated (by
+ * calling instantiateRuntime() on the runtime factory), and this._runtime is set.
+ *
+ * "disposed" - When its dispose() method is called. The {@link ContainerContext} is no longer usable at that point.
+ */
+type ContextLifecycleEvents = "runtimeInstantiated" | "disposed";
 
 export class ContainerContext implements IContainerContext {
 	public static async createOrLoad(
@@ -57,8 +67,8 @@ export class ContainerContext implements IContainerContext {
 		quorum: IQuorum,
 		loader: ILoader,
 		submitFn: (type: MessageType, contents: any, batch: boolean, appData: any) => number,
-		submitSummaryFn: (summaryOp: ISummaryContent) => number,
-		submitBatchFn: (batch: IBatchMessage[]) => number,
+		submitSummaryFn: (summaryOp: ISummaryContent, referenceSequenceNumber?: number) => number,
+		submitBatchFn: (batch: IBatchMessage[], referenceSequenceNumber?: number) => number,
 		submitSignalFn: (contents: any) => void,
 		disposeFn: (error?: ICriticalContainerError) => void,
 		closeFn: (error?: ICriticalContainerError) => void,
@@ -92,6 +102,7 @@ export class ContainerContext implements IContainerContext {
 	}
 
 	public readonly taggedLogger: ITelemetryLogger;
+	public readonly supportedFeatures: ReadonlyMap<string, unknown>;
 
 	public get clientId(): string | undefined {
 		return this.container.clientId;
@@ -170,12 +181,46 @@ export class ContainerContext implements IContainerContext {
 
 	private readonly _fluidModuleP: Promise<IFluidModuleWithDetails>;
 
+	/**
+	 * {@inheritDoc @fluidframework/container-definitions#IContainerContext.getEntryPoint}
+	 */
+	public async getEntryPoint?(): Promise<FluidObject | undefined> {
+		if (this._disposed) {
+			throw new UsageError("The context is already disposed");
+		}
+		if (this._runtime !== undefined) {
+			return this._runtime?.getEntryPoint?.();
+		}
+		return new Promise<FluidObject | undefined>((resolve, reject) => {
+			const runtimeInstantiatedHandler = () => {
+				assert(
+					this._runtime !== undefined,
+					0x5a3 /* runtimeInstantiated fired but runtime is still undefined */,
+				);
+				resolve(this._runtime.getEntryPoint?.());
+				this.lifecycleEvents.off("disposed", disposedHandler);
+			};
+			const disposedHandler = () => {
+				reject(new Error("ContainerContext was disposed"));
+				this.lifecycleEvents.off("runtimeInstantiated", runtimeInstantiatedHandler);
+			};
+			this.lifecycleEvents.once("runtimeInstantiated", runtimeInstantiatedHandler);
+			this.lifecycleEvents.once("disposed", disposedHandler);
+		});
+	}
+
+	/**
+	 * Emits events about the container context's lifecycle.
+	 * Use it to coordinate things inside the ContainerContext class.
+	 */
+	private readonly lifecycleEvents = new TypedEventEmitter<ContextLifecycleEvents>();
+
 	constructor(
 		private readonly container: Container,
 		public readonly scope: FluidObject,
 		private readonly codeLoader: ICodeDetailsLoader,
 		private readonly _codeDetails: IFluidCodeDetails,
-		private _baseSnapshot: ISnapshotTree | undefined,
+		private readonly _baseSnapshot: ISnapshotTree | undefined,
 		public readonly deltaManager: IDeltaManager<ISequencedDocumentMessage, IDocumentMessage>,
 		quorum: IQuorum,
 		public readonly loader: ILoader,
@@ -185,9 +230,15 @@ export class ContainerContext implements IContainerContext {
 			batch: boolean,
 			appData: any,
 		) => number,
-		public readonly submitSummaryFn: (summaryOp: ISummaryContent) => number,
+		public readonly submitSummaryFn: (
+			summaryOp: ISummaryContent,
+			referenceSequenceNumber?: number,
+		) => number,
 		/** @returns clientSequenceNumber of last message in a batch */
-		public readonly submitBatchFn: (batch: IBatchMessage[]) => number,
+		public readonly submitBatchFn: (
+			batch: IBatchMessage[],
+			referenceSequenceNumber?: number,
+		) => number,
 		public readonly submitSignalFn: (contents: any) => void,
 		public readonly disposeFn: (error?: ICriticalContainerError) => void,
 		public readonly closeFn: (error?: ICriticalContainerError) => void,
@@ -202,6 +253,15 @@ export class ContainerContext implements IContainerContext {
 		this._fluidModuleP = new LazyPromise<IFluidModuleWithDetails>(async () =>
 			this.loadCodeModule(_codeDetails),
 		);
+
+		this.supportedFeatures = new Map([
+			/**
+			 * This version of the loader accepts `referenceSequenceNumber`, provided by the container runtime,
+			 * as a parameter to the `submitBatchFn` and `submitSummaryFn` functions.
+			 * This is then used to set the reference sequence numbers of the submitted ops in the DeltaManager.
+			 */
+			["referenceSequenceNumbers", true],
+		]);
 		this.attachListener();
 	}
 
@@ -223,6 +283,7 @@ export class ContainerContext implements IContainerContext {
 		}
 		this._disposed = true;
 
+		this.lifecycleEvents.emit("disposed");
 		this.runtime.dispose(error);
 		this._quorum.dispose();
 		this.deltaManager.dispose();
@@ -313,10 +374,8 @@ export class ContainerContext implements IContainerContext {
 		return true;
 	}
 
-	public notifyAttaching(snapshot: ISnapshotTreeWithBlobContents) {
-		this._baseSnapshot = snapshot;
-		this.runtime.notifyAttaching?.(snapshot);
-		this.runtime.setAttachState(AttachState.Attaching);
+	public async notifyOpReplay(message: ISequencedDocumentMessage): Promise<void> {
+		return this.runtime.notifyOpReplay?.(message);
 	}
 
 	// #region private
@@ -340,9 +399,13 @@ export class ContainerContext implements IContainerContext {
 			{ eventName: "InstantiateRuntime" },
 			async () => runtimeFactory.instantiateRuntime(this, existing),
 		);
+		this.lifecycleEvents.emit("runtimeInstantiated");
 	}
 
 	private attachListener() {
+		this.container.once("attaching", () => {
+			this.runtime.setAttachState(AttachState.Attaching);
+		});
 		this.container.once("attached", () => {
 			this.runtime.setAttachState(AttachState.Attached);
 		});

@@ -41,17 +41,7 @@ export interface AttributionInfo {
 }
 
 // @alpha
-export type AttributionKey = OpAttributionKey | DetachedAttributionKey;
-
-// @public @deprecated (undocumented)
-export enum BindState {
-    // (undocumented)
-    Binding = "Binding",
-    // (undocumented)
-    Bound = "Bound",
-    // (undocumented)
-    NotBound = "NotBound"
-}
+export type AttributionKey = OpAttributionKey | DetachedAttributionKey | LocalAttributionKey;
 
 // @public (undocumented)
 export const blobCountPropertyName = "BlobCount";
@@ -98,6 +88,11 @@ export type FluidDataStoreRegistryEntry = Readonly<Partial<IProvideFluidDataStor
 export enum FlushMode {
     Immediate = 0,
     TurnBased = 1
+}
+
+// @public (undocumented)
+export enum FlushModeExperimental {
+    Async = 2
 }
 
 // @public
@@ -164,6 +159,13 @@ export interface IEnvelope {
 }
 
 // @public
+export interface IExperimentalIncrementalSummaryContext {
+    latestSummarySequenceNumber: number;
+    summaryPath: string;
+    summarySequenceNumber: number;
+}
+
+// @public
 export interface IFluidDataStoreChannel extends IFluidRouter, IDisposable {
     // (undocumented)
     applyStashedOp(content: any): Promise<unknown>;
@@ -184,7 +186,7 @@ export interface IFluidDataStoreChannel extends IFluidRouter, IDisposable {
     summarize(fullTree?: boolean, trackState?: boolean, telemetryContext?: ITelemetryContext): Promise<ISummaryTreeWithStats>;
     updateUsedRoutes(usedRoutes: string[]): void;
     // (undocumented)
-    readonly visibilityState?: VisibilityState_2;
+    readonly visibilityState: VisibilityState_2;
 }
 
 // @public
@@ -210,6 +212,7 @@ export interface IFluidDataStoreContext extends IEventProvider<IFluidDataStoreCo
     ensureNoDataModelChanges<T>(callback: () => T): T;
     getAbsoluteUrl(relativeUrl: string): Promise<string | undefined>;
     getAudience(): IAudience;
+    // @deprecated (undocumented)
     getBaseGCDetails(): Promise<IGarbageCollectionDetailsBase>;
     // (undocumented)
     getCreateChildSummarizerNodeFn(
@@ -277,13 +280,13 @@ export interface IGarbageCollectionDetailsBase {
     usedRoutes?: string[];
 }
 
-// @public
+// @public @deprecated
 export interface IGarbageCollectionNodeData {
     outboundRoutes: string[];
     unreferencedTimestampMs?: number;
 }
 
-// @public
+// @public @deprecated
 export interface IGarbageCollectionSnapshotData {
     // (undocumented)
     deletedNodes: string[] | undefined;
@@ -293,7 +296,7 @@ export interface IGarbageCollectionSnapshotData {
     tombstones: string[] | undefined;
 }
 
-// @public
+// @public @deprecated
 export interface IGarbageCollectionState {
     // (undocumented)
     gcNodes: {
@@ -367,6 +370,7 @@ export interface ISummarizerNode {
     // (undocumented)
     getChild(id: string): ISummarizerNode | undefined;
     invalidate(sequenceNumber: number): void;
+    isSummaryInProgress?(): boolean;
     recordChange(op: ISequencedDocumentMessage): void;
     readonly referenceSequenceNumber: number;
     summarize(fullTree: boolean, trackState?: boolean, telemetryContext?: ITelemetryContext): Promise<ISummarizeResult>;
@@ -426,6 +430,13 @@ export interface ITelemetryContext {
     get(prefix: string, property: string): TelemetryEventPropertyType;
     serialize(): string;
     set(prefix: string, property: string, value: TelemetryEventPropertyType): void;
+    setMultiple(prefix: string, property: string, values: Record<string, TelemetryEventPropertyType>): void;
+}
+
+// @alpha
+export interface LocalAttributionKey {
+    // (undocumented)
+    type: "local";
 }
 
 // @public
@@ -441,7 +452,7 @@ export interface OpAttributionKey {
 }
 
 // @public (undocumented)
-export type SummarizeInternalFn = (fullTree: boolean, trackState: boolean, telemetryContext?: ITelemetryContext) => Promise<ISummarizeInternalResult>;
+export type SummarizeInternalFn = (fullTree: boolean, trackState: boolean, telemetryContext?: ITelemetryContext, incrementalSummaryContext?: IExperimentalIncrementalSummaryContext) => Promise<ISummarizeInternalResult>;
 
 // @public (undocumented)
 export const totalBlobSizePropertyName = "TotalBlobSize";

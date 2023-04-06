@@ -43,25 +43,103 @@
  * @packageDocumentation
  */
 
-export { MemberChangeKind } from "./Audience";
-
-export { IFluidClientDebugger, IFluidClientDebuggerEvents } from "./IFluidClientDebugger";
-
+export { MemberChangeKind } from "./AudienceMetadata";
+export { ContainerStateChangeKind } from "./Container";
+export { ContainerDevtools, ContainerDevtoolsProps } from "./ContainerDevtools";
+export { ContainerMetadata, ContainerStateMetadata } from "./ContainerMetadata";
+export {
+	FluidHandleNode,
+	FluidObjectId,
+	FluidObjectNode,
+	FluidObjectNodeBase,
+	FluidObjectTreeNode,
+	FluidObjectValueNode,
+	FluidUnknownObjectNode,
+	Primitive,
+	RootHandleNode,
+	TreeNodeBase,
+	ValueNodeBase,
+	VisualChildNode,
+	VisualNode,
+	VisualNodeBase,
+	VisualNodeKind,
+	VisualTreeNode,
+	VisualValueNode,
+	VisualizeChildData,
+	VisualizeSharedObject,
+	UnknownObjectNode,
+} from "./data-visualization";
+export { ContainerDevtoolsEvents, IContainerDevtools } from "./IContainerDevtools";
+export { FluidDevtoolsEvents, IFluidDevtools } from "./IFluidDevtools";
+export { FluidDevtools, FluidDevtoolsProps, initializeFluidDevtools } from "./FluidDevtools";
+export { FluidDebuggerLogger } from "./FluidDebuggerLogger";
 export {
 	AudienceChangeLogEntry,
 	ConnectionStateChangeLogEntry,
 	LogEntry,
 	StateChangeLogEntry,
 } from "./Logs";
-
 export {
-	DebuggerRegistry,
-	DebuggerRegistryEvents,
-	clearDebuggerRegistry,
-	closeFluidClientDebugger,
-	FluidClientDebuggerProps,
-	getDebuggerRegistry,
-	getFluidClientDebugger,
-	getFluidClientDebuggers,
-	initializeFluidClientDebugger,
-} from "./Registry";
+	AudienceClientMetadata,
+	AudienceSummaryMessage,
+	AudienceSummaryMessageData,
+	AudienceSummaryMessageType,
+	devtoolsMessageSource,
+	GetAudienceMessage,
+	GetAudienceMessageType,
+	HasContainerId,
+	HasFluidObjectId,
+	ConnectContainerMessage,
+	ConnectContainerMessageData,
+	ConnectContainerMessageType,
+	DisconnectContainerMessage,
+	DisconnectContainerMessageData,
+	DisconnectContainerMessageType,
+	CloseContainerMessage,
+	CloseContainerMessageData,
+	CloseContainerMessageType,
+	ContainerListMessage,
+	ContainerListMessageData,
+	ContainerListMessageType,
+	ContainerStateChangeMessage,
+	ContainerStateChangeMessageData,
+	ContainerStateChangeMessageType,
+	ContainerStateHistoryMessage,
+	ContainerStateHistoryMessageData,
+	ContainerStateHistoryMessageType,
+	DataVisualizationMessage,
+	DataVisualizationMessageData,
+	DataVisualizationMessageType,
+	GetContainerListMessage,
+	GetContainerListMessageType,
+	GetContainerStateMessage,
+	GetContainerStateMessageData,
+	GetContainerStateMessageType,
+	GetDataVisualizationMessage,
+	GetDataVisualizationMessageData,
+	GetDataVisualizationMessageType,
+	GetRootDataVisualizationsMessage,
+	GetRootDataVisualizationsMessageData,
+	GetRootDataVisualizationsMessageType,
+	IDebuggerMessage,
+	IMessageRelay,
+	IMessageRelayEvents,
+	ISourcedDebuggerMessage,
+	ITimestampedTelemetryEvent,
+	RootDataVisualizationsMessage,
+	RootDataVisualizationsMessageData,
+	RootDataVisualizationsMessageType,
+	TelemetryEventMessage,
+	TelemetryEventMessageData,
+	TelemetryEventMessageType,
+	TelemetryHistoryMessage,
+	TelemetryHistoryMessageType,
+	GetTelemetryHistoryMessage,
+	GetTelemetryHistoryMessageType,
+	handleIncomingMessage,
+	handleIncomingWindowMessage,
+	InboundHandlers,
+	isDebuggerMessage,
+	MessageLoggingOptions,
+	postMessagesToWindow,
+} from "./messaging";

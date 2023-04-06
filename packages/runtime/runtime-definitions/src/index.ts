@@ -7,13 +7,14 @@ export {
 	AttributionInfo,
 	AttributionKey,
 	DetachedAttributionKey,
+	LocalAttributionKey,
 	OpAttributionKey,
 } from "./attribution";
 export {
 	AliasResult,
-	BindState,
 	CreateChildSummarizerNodeFn,
 	FlushMode,
+	FlushModeExperimental,
 	IContainerRuntimeBase,
 	IContainerRuntimeBaseEvents,
 	IDataStore,
@@ -55,6 +56,7 @@ export {
 	IGarbageCollectionSnapshotData,
 	IGarbageCollectionState,
 	IGarbageCollectionSummaryDetailsLegacy,
+	IExperimentalIncrementalSummaryContext,
 	ISummarizeInternalResult,
 	ISummarizeResult,
 	ISummarizerNode,

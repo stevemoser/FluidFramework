@@ -2,13 +2,14 @@
  * Copyright (c) Microsoft Corporation and contributors. All rights reserved.
  * Licensed under the MIT License.
  */
-
+import { IDBPDatabase } from "idb";
 import { IPersistedCache, ICacheEntry, IFileEntry } from "@fluidframework/odsp-driver-definitions";
 import { ITelemetryBaseLogger, ITelemetryLogger } from "@fluidframework/common-definitions";
 import { ChildLogger } from "@fluidframework/telemetry-utils";
 import { scheduleIdleTask } from "./scheduleIdleTask";
 import {
 	getFluidCacheIndexedDbInstance,
+	FluidCacheDBSchema,
 	FluidDriverObjectStoreName,
 	getKeyForCacheEntry,
 } from "./FluidCacheIndexedDb";
@@ -88,15 +89,17 @@ export class FluidCache implements IPersistedCache {
 		});
 
 		scheduleIdleTask(async () => {
+			let db: IDBPDatabase<FluidCacheDBSchema> | undefined;
+
 			// Delete entries that have not been accessed recently to clean up space
 			try {
-				const db = await getFluidCacheIndexedDbInstance(this.logger);
+				db = await getFluidCacheIndexedDbInstance(this.logger);
 
 				const transaction = db.transaction(FluidDriverObjectStoreName, "readwrite");
-				const index = transaction.store.index("lastAccessTimeMs");
-				// Get items that have not been accessed in 4 weeks
+				const index = transaction.store.index("createdTimeMs");
+				// Get items which were cached before the maxCacheItemAge.
 				const keysToDelete = await index.getAllKeys(
-					IDBKeyRange.upperBound(new Date().getTime() - 4 * 7 * 24 * 60 * 60 * 1000),
+					IDBKeyRange.upperBound(new Date().getTime() - this.maxCacheItemAge),
 				);
 
 				await Promise.all(keysToDelete.map((key) => transaction.store.delete(key)));
@@ -108,13 +111,16 @@ export class FluidCache implements IPersistedCache {
 					},
 					error,
 				);
+			} finally {
+				db?.close();
 			}
 		});
 	}
 
 	public async removeEntries(file: IFileEntry): Promise<void> {
+		let db: IDBPDatabase<FluidCacheDBSchema> | undefined;
 		try {
-			const db = await getFluidCacheIndexedDbInstance(this.logger);
+			db = await getFluidCacheIndexedDbInstance(this.logger);
 
 			const transaction = db.transaction(FluidDriverObjectStoreName, "readwrite");
 			const index = transaction.store.index("fileId");
@@ -130,6 +136,8 @@ export class FluidCache implements IPersistedCache {
 				},
 				error,
 			);
+		} finally {
+			db?.close();
 		}
 	}
 
@@ -143,6 +151,8 @@ export class FluidCache implements IPersistedCache {
 			cacheHit: cachedItem !== undefined,
 			type: cacheEntry.type,
 			duration: performance.now() - startTime,
+			dbOpenPerf: cachedItem?.dbOpenPerf,
+			dbClosePerf: cachedItem?.dbClosePerf,
 		});
 
 		// Value will contain metadata like the expiry time, we just want to return the object we were asked to cache
@@ -151,14 +161,17 @@ export class FluidCache implements IPersistedCache {
 	}
 
 	private async getItemFromCache(cacheEntry: ICacheEntry) {
+		let db: IDBPDatabase<FluidCacheDBSchema> | undefined;
 		try {
 			const key = getKeyForCacheEntry(cacheEntry);
 
-			const db = await getFluidCacheIndexedDbInstance(this.logger);
-
+			const dbOpenStartTime = performance.now();
+			db = await getFluidCacheIndexedDbInstance(this.logger);
+			const dbOpenPerf = performance.now() - dbOpenStartTime;
 			const value = await db.get(FluidDriverObjectStoreName, key);
 
 			if (!value) {
+				db.close();
 				return undefined;
 			}
 
@@ -169,6 +182,7 @@ export class FluidCache implements IPersistedCache {
 					subCategory: FluidCacheEventSubCategories.FluidCache,
 				});
 
+				db.close();
 				return undefined;
 			}
 
@@ -176,35 +190,14 @@ export class FluidCache implements IPersistedCache {
 
 			// If too much time has passed since this cache entry was used, we will also return undefined
 			if (currentTime - value.createdTimeMs > this.maxCacheItemAge) {
+				db.close();
 				return undefined;
 			}
 
-			const transaction = db.transaction(FluidDriverObjectStoreName, "readwrite");
-			// We don't want to block the get return of this function on updating the last accessed time
-			// We catch this promise because there is no user bad if this is rejected.
-			transaction.store
-				.get(key)
-				.then(async (valueToUpdate) => {
-					// This value in the database could have been updated concurrently by other tabs/iframes
-					// since we first read it. Only update the last accessed time if the current value in the
-					// DB was the same one we returned.
-					if (
-						valueToUpdate !== undefined &&
-						valueToUpdate.createdTimeMs === value.createdTimeMs &&
-						(valueToUpdate.lastAccessTimeMs === undefined ||
-							valueToUpdate.lastAccessTimeMs < currentTime)
-					) {
-						await transaction.store.put(
-							{ ...valueToUpdate, lastAccessTimeMs: currentTime },
-							key,
-						);
-					}
-					await transaction.done;
-
-					db.close();
-				})
-				.catch(() => {});
-			return value;
+			const dbCloseStartTime = performance.now();
+			db.close();
+			const dbClosePerf = performance.now() - dbCloseStartTime;
+			return { ...value, dbOpenPerf, dbClosePerf };
 		} catch (error: any) {
 			// We can fail to open the db for a variety of reasons,
 			// such as the database version having upgraded underneath us. Return undefined in this case
@@ -212,13 +205,15 @@ export class FluidCache implements IPersistedCache {
 				{ eventName: FluidCacheErrorEvent.FluidCacheGetError },
 				error,
 			);
+			db?.close();
 			return undefined;
 		}
 	}
 
 	public async put(entry: ICacheEntry, value: any): Promise<void> {
+		let db: IDBPDatabase<FluidCacheDBSchema> | undefined;
 		try {
-			const db = await getFluidCacheIndexedDbInstance(this.logger);
+			db = await getFluidCacheIndexedDbInstance(this.logger);
 
 			const currentTime = new Date().getTime();
 
@@ -244,6 +239,8 @@ export class FluidCache implements IPersistedCache {
 				{ eventName: FluidCacheErrorEvent.FluidCachePutError },
 				error,
 			);
+		} finally {
+			db?.close();
 		}
 	}
 }

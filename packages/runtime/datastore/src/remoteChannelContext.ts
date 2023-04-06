@@ -20,7 +20,7 @@ import {
 	CreateChildSummarizerNodeFn,
 	IFluidDataStoreContext,
 	IGarbageCollectionData,
-	IGarbageCollectionDetailsBase,
+	IExperimentalIncrementalSummaryContext,
 	ISummarizeInternalResult,
 	ISummarizeResult,
 	ISummarizerNodeWithGC,
@@ -63,7 +63,6 @@ export class RemoteChannelContext implements IChannelContext {
 		private readonly registry: ISharedObjectRegistry,
 		extraBlobs: Map<string, ArrayBufferLike> | undefined,
 		createSummarizerNode: CreateChildSummarizerNodeFn,
-		getBaseGCDetails: () => Promise<IGarbageCollectionDetailsBase>,
 		private readonly attachMessageType?: string,
 	) {
 		assert(!this.id.includes("/"), 0x310 /* Channel context ID cannot contain slashes */);
@@ -86,12 +85,18 @@ export class RemoteChannelContext implements IChannelContext {
 			fullTree: boolean,
 			trackState: boolean,
 			telemetryContext?: ITelemetryContext,
-		) => this.summarizeInternal(fullTree, trackState, telemetryContext);
+			incrementalSummaryContext?: IExperimentalIncrementalSummaryContext,
+		) =>
+			this.summarizeInternal(
+				fullTree,
+				trackState,
+				telemetryContext,
+				incrementalSummaryContext,
+			);
 
 		this.summarizerNode = createSummarizerNode(
 			thisSummarizeInternal,
 			async (fullGC?: boolean) => this.getGCDataInternal(fullGC),
-			async () => getBaseGCDetails(),
 		);
 
 		this.thresholdOpsCounter = new ThresholdCounter(
@@ -170,6 +175,7 @@ export class RemoteChannelContext implements IChannelContext {
 		fullTree: boolean,
 		trackState: boolean,
 		telemetryContext?: ITelemetryContext,
+		incrementalSummaryContext?: IExperimentalIncrementalSummaryContext,
 	): Promise<ISummarizeInternalResult> {
 		const channel = await this.getChannel();
 		const summarizeResult = await summarizeChannelAsync(
@@ -177,6 +183,7 @@ export class RemoteChannelContext implements IChannelContext {
 			fullTree,
 			trackState,
 			telemetryContext,
+			incrementalSummaryContext,
 		);
 		return { ...summarizeResult, id: this.id };
 	}
