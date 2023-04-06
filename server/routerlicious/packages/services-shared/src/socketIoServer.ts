@@ -69,6 +69,7 @@ class SocketIoServer implements core.IWebSocketServer {
 	public async close(): Promise<void> {
 		const pubClosedP = util.promisify(((callback) => this.pub.quit(callback)) as any)();
 		const subClosedP = util.promisify(((callback) => this.sub.quit(callback)) as any)();
+        this.io.disconnectSockets();
 		const ioClosedP = util.promisify(((callback) => this.io.close(callback)) as any)();
 		await Promise.all([pubClosedP, subClosedP, ioClosedP]);
 	}
