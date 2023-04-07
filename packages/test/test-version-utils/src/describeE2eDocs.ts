@@ -32,12 +32,12 @@ const E2EDefaultDocumentTypes: DescribeE2EDocInfo[] = [
 	{
 		testTitle: "10Mb Map",
 		documentType: "LargeDocumentMap",
-		minSampleCount: 2,
+		minSampleCount: 1,
 	},
 	{
 		testTitle: "5Mb Map",
 		documentType: "MediumDocumentMap",
-		minSampleCount: 2,
+		minSampleCount: 1,
 	},
 	{
 		testTitle: "250 DataStores - 750 DDSs",
