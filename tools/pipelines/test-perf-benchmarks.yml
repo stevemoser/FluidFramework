@@ -388,12 +388,6 @@ stages:
       - name: memoryUsageTestOutputFolder
         value: ${{ variables.testWorkspace }}/node_modules/@fluid-internal/test-end-to-end-tests/.memoryTestsOutput
         readonly: true
-      - name: executionTimeTestOutputFolderAFR
-        value: ${{ variables.testWorkspace }}/node_modules/@fluid-internal/test-end-to-end-tests/.timeTestsOutputAFR
-        readonly: true
-      - name: memoryUsageTestOutputFolderAFR
-        value: ${{ variables.testWorkspace }}/node_modules/@fluid-internal/test-end-to-end-tests/.memoryTestsOutputAFR
-        readonly: true
       - name: testPackage
         value: '@fluid-internal/test-end-to-end-tests'
         readonly: true
@@ -700,8 +694,8 @@ stages:
             workingDirectory: $(toolAbsolutePath)
             script: |
               echo "Writing the following performance tests results to Aria/Kusto - FRS"
-              ls -la ${{ variables.executionTimeTestOutputFolderAFR }};
-              node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/executionTimeTestHandler.js --dir ${{ variables.executionTimeTestOutputFolderAFR }};
+              ls -la ${{ variables.executionTimeTestOutputFolder }};
+              node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/executionTimeTestHandler.js --dir ${{ variables.executionTimeTestOutputFolder }};
           env:
             FLUID_ENDPOINTNAME: "frs"
 
@@ -713,24 +707,10 @@ stages:
             workingDirectory: $(toolAbsolutePath)
             script: |
               echo "Writing the following performance tests results to Aria/Kusto - FRS"
-              ls -la ${{ variables.memoryUsageTestOutputFolderAFR }};
-              node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/memoryUsageTestHandler.js --dir ${{ variables.memoryUsageTestOutputFolderAFR }};
+              ls -la ${{ variables.memoryUsageTestOutputFolder }};
+              node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/memoryUsageTestHandler.js --dir ${{ variables.memoryUsageTestOutputFolder }};
           env:
             FLUID_ENDPOINTNAME: "frs"
-
-        - task: PublishPipelineArtifact@1
-          displayName: Publish Artifact - E2E perf tests output - execution time frs
-          condition: succeededOrFailed()
-          inputs:
-            targetPath: '${{ variables.executionTimeTestOutputFolderAFR }}'
-            artifactName: 'perf-test-outputs-e2e_execution-time'
-
-        - task: PublishPipelineArtifact@1
-          displayName: Publish Artifact - E2E perf tests output - memory usage frs
-          condition: succeededOrFailed()
-          inputs:
-            targetPath: '${{ variables.memoryUsageTestOutputFolderAFR }}'
-            artifactName: 'perf-test-outputs-e2e_memory-usage'
 
         - task: Bash@3
           displayName: Remove Output Folders after FRS run
@@ -738,10 +718,10 @@ stages:
             targetType: 'inline'
             workingDirectory: $(toolAbsolutePath)
             script: |
-              ls -laR ${{ variables.executionTimeTestOutputFolderAFR }};
-              echo "Cleanup  ${{ variables.executionTimeTestOutputFolderAFR }}"
-              rm -rf ${{ variables.executionTimeTestOutputFolderAFR }};
-              ls -laR ${{ variables.memoryUsageTestOutputFolderAFR }};
-              echo "Cleanup  ${{ variables.memoryUsageTestOutputFolderAFR }}"
-              rm -rf ${{ variables.memoryUsageTestOutputFolderAFR }};
+              ls -laR ${{ variables.executionTimeTestOutputFolder }};
+              echo "Cleanup  ${{ variables.executionTimeTestOutputFolder }}"
+              rm -rf ${{ variables.executionTimeTestOutputFolder }};
+              ls -laR ${{ variables.memoryUsageTestOutputFolder }};
+              echo "Cleanup  ${{ variables.memoryUsageTestOutputFolder }}"
+              rm -rf ${{ variables.memoryUsageTestOutputFolder }};
 
