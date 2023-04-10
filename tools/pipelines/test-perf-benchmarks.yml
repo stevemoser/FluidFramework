@@ -59,6 +59,15 @@ variables:
     readonly: true
   - group: prague-key-vault
 
+  # Performance e2e tests
+  - name: endpoints
+    displayName: ENDPOINT
+    type: object
+    default:
+    - local
+    - odsp
+    - afr
+
 stages:
   # Performance unit tests - runtime
   - stage: perf_unit_tests_runtime
@@ -199,7 +208,7 @@ stages:
               node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/executionTimeTestHandler.js --dir '${{ variables.consolidatedTestsOutputFolder }}';
 
         - task: Bash@3
-          displayName: Send Execution Time Performance Benchmark Measurements to Azure App Insights
+          displayName: Send Execution Time Performance Benchmark Measurments to Azure App Insights
           inputs:
             targetType: 'inline'
             workingDirectory: $(toolAbsolutePath)
@@ -376,16 +385,6 @@ stages:
             artifactName: 'perf-test-outputs_memory-usage'
           condition: succeededOrFailed()
 
-  # Performance e2e tests
-  - name: endpoints
-    displayName: ENDPOINT
-    type: object
-    default:
-    - local
-    - odsp
-    - afr
-
-  stages:
   - ${{ each stage in parameters.endpoints }}:
     - stage: perf_e2e_tests_${{ stage }}
       displayName: Perf e2e tests_${{ stage }}
