@@ -38,6 +38,15 @@ parameters:
     - "@fluid-experimental/tree"
     - "@fluidframework/merge-tree"
 
+# Performance e2e tests
+- name: endpoints
+  displayName: ENDPOINT
+  type: object
+  default:
+  - local
+  - odsp
+  - afr
+
 variables:
   # We use 'chalk' to colorize output, which auto-detects color support in the
   # running terminal.  The log output shown in Azure DevOps job runs only has
@@ -58,15 +67,6 @@ variables:
     value: $(Build.SourcesDirectory)/tools/telemetry-generator
     readonly: true
   - group: prague-key-vault
-
-  # Performance e2e tests
-  - name: endpoints
-    displayName: ENDPOINT
-    type: object
-    default:
-    - local
-    - odsp
-    - afr
 
 stages:
   # Performance unit tests - runtime
