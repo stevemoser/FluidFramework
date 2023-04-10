@@ -385,6 +385,7 @@ stages:
           condition: succeededOrFailed()
 
   - ${{ each stage in parameters.endpoints }}:
+
     - stage: perf_e2e_tests_${{ stage }}
       displayName: Perf e2e tests_${{ stage }}
       dependsOn: []
