@@ -534,7 +534,7 @@ stages:
                 ls -la ${{ variables.executionTimeTestOutputFolder }};
                 node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/executionTimeTestHandler.js --dir ${{ variables.executionTimeTestOutputFolder }};
             env:
-              FLUID_ENDPOINTNAME: "${{ stage }}"
+              FLUID_ENDPOINTNAME: ${{ stage }}
 
           - task: Bash@3
             displayName: Write measurements to Aria/Kusto - memory usage ${{ stage }}
@@ -547,7 +547,7 @@ stages:
                 ls -la ${{ variables.memoryUsageTestOutputFolder }};
                 node --require @ff-internal/aria-logger bin/run --handlerModule $(toolAbsolutePath)/dist/handlers/memoryUsageTestHandler.js --dir ${{ variables.memoryUsageTestOutputFolder }};
             env:
-              FLUID_ENDPOINTNAME: "${{ stage }}"
+              FLUID_ENDPOINTNAME: ${{ stage }}
 
           - task: Bash@3
             displayName: Send Execution Time Perf Benchmark Measurements to Azure App Insights
