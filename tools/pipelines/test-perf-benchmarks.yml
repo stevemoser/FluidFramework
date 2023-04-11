@@ -480,27 +480,32 @@ stages:
                 # Run execution time tests
                 echo "FLUID_ENDPOINTNAME = $FLUID_ENDPOINTNAME"
                 if [[ $stage -eq 'local' ]]; then
-                npm run test:benchmark:report;
-                fi
-                if [[ $stage -eq 'odsp' ]]; then
-                npm run test:benchmark:report:odsp;
-                fi
-                if [[ $stage -eq 'frs' ]]; then
-                npm run test:benchmark:report:frs;
+                  npm run test:benchmark:report;
+                else
+                  if [[ $stage -eq 'odsp' ]]; then
+                    npm run test:benchmark:report:odsp;
+                  else
+                    if [[ $stage -eq 'frs' ]]; then
+                      npm run test:benchmark:report:frs;
+                    fi
+                  fi
                 fi
                 executionTimeTestsExitCode=$?;
 
                 echo "FLUID_ENDPOINTNAME = $FLUID_ENDPOINTNAME"
                 # Run memory tests
                 if [[ $stage -eq 'local' ]]; then
-                npm run test:memory-profiling:report;
+                  npm run test:memory-profiling:report;
+                else
+                  if [[ $stage -eq 'odsp' ]]; then
+                    npm run test:memory-profiling:report:odsp;
+                  else
+                    if [[ $stage -eq 'frs' ]]; then
+                      npm run test:memory-profiling:report:frs;
+                    fi
+                  fi
                 fi
-                if [[ $stage -eq 'odsp' ]]; then
-                npm run test:memory-profiling:report:odsp;
-                fi
-                if [[ $stage -eq 'frs' ]]; then
-                npm run test:memory-profiling:report:frs;
-                fi
+
                 memoryTestsExitCode=$?;
 
                 if [[ $executionTimeTestsExitCode -ne 0 ]]; then
