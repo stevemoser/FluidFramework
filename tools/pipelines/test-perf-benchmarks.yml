@@ -551,7 +551,7 @@ stages:
 
           - task: Bash@3
             displayName: Send Execution Time Perf Benchmark Measurements to Azure App Insights
-            condition: eq(${{ stage }}, 'local')
+            condition: eq('${{ stage }}', 'local')
             inputs:
               targetType: 'inline'
               workingDirectory: $(toolAbsolutePath)
@@ -566,7 +566,7 @@ stages:
 
           - task: Bash@3
             displayName: Send Memory Usage Perf Benchmark Measurements to Azure App Insights
-            condition: eq(${{ stage }}, 'local')
+            condition: eq('${{ stage }}', 'local')
             inputs:
               targetType: 'inline'
               workingDirectory: $(toolAbsolutePath)
@@ -581,7 +581,7 @@ stages:
 
           - task: PublishPipelineArtifact@1
             displayName: Publish Artifact - E2E perf tests output - execution time {{ $stage }}
-            condition: and(succeededOrFailed(), eq(${{ stage }}, 'local'))
+            condition: and(succeededOrFailed(), eq('${{ stage }}', 'local'))
 
             inputs:
               targetPath: '${{ variables.executionTimeTestOutputFolder }}'
@@ -589,7 +589,7 @@ stages:
 
           - task: PublishPipelineArtifact@1
             displayName: Publish Artifact - E2E perf tests output - memory usage {{ $stage }}
-            condition: and(succeededOrFailed(), eq(${{ stage }}, 'local'))
+            condition: and(succeededOrFailed(), eq('${{ stage }}', 'local'))
             inputs:
               targetPath: '${{ variables.memoryUsageTestOutputFolder }}'
               artifactName: 'perf-test-outputs-e2e_memory-usage'
