@@ -479,7 +479,7 @@ stages:
 
                 # Run execution time tests
                 echo "FLUID_ENDPOINTNAME = $FLUID_ENDPOINTNAME"
-                if [[ '${{ stage }}' -eq 'local' ]]; then
+                if [[ '${{ stage }}' == 'local' ]]; then
                   npm run test:benchmark:report;
                 else
                   npm run test:benchmark:report:${{ stage }};
@@ -488,7 +488,7 @@ stages:
 
                 echo "FLUID_ENDPOINTNAME = $FLUID_ENDPOINTNAME"
                 # Run memory tests
-                if [[ '${{ stage }}' -eq 'local' ]]; then
+                if [[ '${{ stage }}' == 'local' ]]; then
                   npm run test:memory-profiling:report;
                 else
                   npm run test:memory-profiling:report:${{ stage }};
