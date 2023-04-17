@@ -126,7 +126,7 @@ stages:
 
   # stress tests frs canary
   - stage:
-    displayName: Stress tests - frs
+    displayName: Stress tests - frs-canary
     dependsOn: []
     # use a variable group with exclusive lock force only one run at a time and avoid overloading the server/throttling
     variables:
@@ -141,5 +141,5 @@ stages:
         timeoutInMinutes: 120
         testCommand: start:frs
         env:
-          fluid__test__driver__frs: $(automation-fluid-test-driver-frs-canary-stress-test)
+          fluid__test__driver__frs: $(automation-fluid-test-driver-frs-canary-stress-test-1)
           FLUID_TEST_LOGGER_PKG_PATH: ${{ variables.testWorkspace }}/node_modules/@ff-internal/aria-logger # Contains getTestLogger impl to inject
