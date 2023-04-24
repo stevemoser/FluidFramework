@@ -68,7 +68,15 @@ export class RestLessServer {
 						req.headers["content-type"]?.startsWith(
 							"application/x-www-form-urlencoded",
 						),
-				})(request, response, () => resolve()),
+				})(request, response, () => {
+					response.setHeader("Access-Control-Expose-Headers","Content-Encoding, Content-Length, Content-Type");
+					response.setHeader("Timing-Allow-Origin", "*");
+					const length = request.body?.body ? `${(request.body.body as string).length}` : undefined;
+					if (length !== undefined) {
+						response.setHeader("Content-Length", length);
+					}
+					resolve();
+				}),
 			);
 		}
 		if (!request.body || typeof request.body !== "object") {
