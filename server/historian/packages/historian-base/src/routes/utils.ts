@@ -35,9 +35,18 @@ export function handleResponse<T>(
 	resultP.then(
 		(result) => {
 			if (allowClientCache === true) {
-				response.setHeader("Cache-Control", "public, max-age=31536000");
+				response.setHeader("Cache-Control", "public, max-age=31535999");
 			} else if (allowClientCache === false) {
 				response.setHeader("Cache-Control", "no-store, max-age=0");
+			}
+			if (!response.getHeader("access-control-expose-headers")) {
+				response.setHeader(
+					"access-control-expose-headers",
+					"content-encoding, content-length, content-type",
+				);
+			}
+			if (!response.getHeader("timing-allow-origin")) {
+				response.setHeader("timing-allow-origin", "*");
 			}
 
 			onSuccess(result);

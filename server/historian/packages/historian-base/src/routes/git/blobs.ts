@@ -139,7 +139,16 @@ export function create(
 			blobP.then(
 				(blob) => {
 					if (useCache) {
-						response.setHeader("Cache-Control", "public, max-age=31536000");
+						response.setHeader("Cache-Control", "public, max-age=31535997");
+					}
+					if (!response.getHeader("access-control-expose-headers")) {
+						response.setHeader(
+							"access-control-expose-headers",
+							"content-encoding, content-length, content-type",
+						);
+					}
+					if (!response.getHeader("timing-allow-origin")) {
+						response.setHeader("timing-allow-origin", "*");
 					}
 					response
 						.status(200)
