@@ -41,14 +41,14 @@ export function create(
 		authorization: string,
 		body: git.ICreateBlobParams,
 	): Promise<git.ICreateBlobResponse> {
-		const service = await utils.createGitService({
+		const service = await utils.createGitService(
 			config,
 			tenantId,
 			authorization,
 			tenantService,
 			cache,
 			asyncLocalStorage,
-		});
+		);
 		return service.createBlob(body);
 	}
 
@@ -58,14 +58,14 @@ export function create(
 		sha: string,
 		useCache: boolean,
 	): Promise<git.IBlob> {
-		const service = await utils.createGitService({
+		const service = await utils.createGitService(
 			config,
 			tenantId,
 			authorization,
 			tenantService,
 			cache,
 			asyncLocalStorage,
-		});
+		);
 		return service.getBlob(sha, useCache);
 	}
 
@@ -139,7 +139,16 @@ export function create(
 			blobP.then(
 				(blob) => {
 					if (useCache) {
-						response.setHeader("Cache-Control", "public, max-age=31536000");
+						response.setHeader("Cache-Control", "public, max-age=31535997");
+					}
+					if (!response.getHeader("access-control-expose-headers")) {
+						response.setHeader(
+							"access-control-expose-headers",
+							"content-encoding, content-length, content-type",
+						);
+					}
+					if (!response.getHeader("timing-allow-origin")) {
+						response.setHeader("timing-allow-origin", "*");
 					}
 					response
 						.status(200)

@@ -35,9 +35,18 @@ export function handleResponse<T>(
 	resultP.then(
 		(result) => {
 			if (allowClientCache === true) {
-				response.setHeader("Cache-Control", "public, max-age=31536000");
+				response.setHeader("Cache-Control", "public, max-age=31535999");
 			} else if (allowClientCache === false) {
 				response.setHeader("Cache-Control", "no-store, max-age=0");
+			}
+			if (!response.getHeader("access-control-expose-headers")) {
+				response.setHeader(
+					"access-control-expose-headers",
+					"content-encoding, content-length, content-type",
+				);
+			}
+			if (!response.getHeader("timing-allow-origin")) {
+				response.setHeader("timing-allow-origin", "*");
 			}
 
 			onSuccess(result);
@@ -60,51 +69,34 @@ export function handleResponse<T>(
 	);
 }
 
-export class createGitServiceArgs {
-	config: nconf.Provider;
-	tenantId: string;
-	authorization: string;
-	tenantService: ITenantService;
-	cache?: ICache;
-	asyncLocalStorage?: AsyncLocalStorage<string>;
-	initialUpload?: boolean = false;
-	storageName?: string;
-	allowDisabledTenant?: boolean = false;
-}
-
-export async function createGitService(createArgs: createGitServiceArgs): Promise<RestGitService> {
-	const {
-		config,
-		tenantId,
-		authorization,
-		tenantService,
-		cache,
-		asyncLocalStorage,
-		initialUpload,
-		storageName,
-		allowDisabledTenant,
-	} = createArgs;
+export async function createGitService(
+	config: nconf.Provider,
+	tenantId: string,
+	authorization: string,
+	tenantService: ITenantService,
+	cache?: ICache,
+	asyncLocalStorage?: AsyncLocalStorage<string>,
+	allowDisabledTenant = false,
+): Promise<RestGitService> {
 	const token = parseToken(tenantId, authorization);
-	const decoded = decode(token) as ITokenClaims;
-	const documentId = decoded.documentId;
-	if (containsPathTraversal(documentId)) {
-		// Prevent attempted directory traversal.
-		throw new NetworkError(400, `Invalid document id: ${documentId}`);
-	}
 	const details = await tenantService.getTenant(tenantId, token, allowDisabledTenant);
 	const customData: ITenantCustomDataExternal = details.customData;
 	const writeToExternalStorage = !!customData?.externalStorageData;
+	const storageName = customData?.storageName;
+	const decoded = decode(token) as ITokenClaims;
 	const storageUrl = config.get("storageUrl") as string | undefined;
-	const calculatedStorageName =
-		initialUpload && storageName ? storageName : customData?.storageName;
+	if (containsPathTraversal(decoded.documentId)) {
+		// Prevent attempted directory traversal.
+		throw new NetworkError(400, `Invalid document id: ${decoded.documentId}`);
+	}
 	const service = new RestGitService(
 		details.storage,
 		writeToExternalStorage,
 		tenantId,
-		documentId,
+		decoded.documentId,
 		cache,
 		asyncLocalStorage,
-		calculatedStorageName,
+		storageName,
 		storageUrl,
 	);
 	return service;
