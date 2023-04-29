@@ -151,11 +151,10 @@ export function create(
 						response.setHeader("timing-allow-origin", "*");
 					}
 					const stream = Buffer.from(blob.content, "base64");
-					response
-						.status(200)
-						.write(stream, () => {
-							response.setHeader("content-length", stream.length);
-							response.end()} );
+					response.status(200).write(stream, () => {
+						response.setHeader("content-length", stream.length);
+						response.end();
+					});
 				},
 				(error) => {
 					response.status(error?.code ?? 400).json(error?.message ?? error);
