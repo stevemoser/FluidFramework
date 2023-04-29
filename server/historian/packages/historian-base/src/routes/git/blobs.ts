@@ -11,6 +11,7 @@ import {
 	throttle,
 	getParam,
 } from "@fluidframework/server-services-utils";
+import { Lumberjack } from "@fluidframework/server-services-telemetry";
 import { Router } from "express";
 import * as nconf from "nconf";
 import winston from "winston";
@@ -152,6 +153,7 @@ export function create(
 					}
 					const stream = Buffer.from(blob.content, "base64");
 					response.status(200).write(stream, () => {
+						Lumberjack.info(`Nichoc content ${stream.length}`);
 						response.setHeader("content-length", stream.length);
 						response.end();
 					});
