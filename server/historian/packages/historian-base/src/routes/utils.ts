@@ -37,7 +37,7 @@ export function handleResponse<T>(
 			if (allowClientCache === true) {
 				response.setHeader("Cache-Control", "public, max-age=31535999");
 			} else if (allowClientCache === false) {
-				response.setHeader("Cache-Control", "no-store, max-age=1");
+				response.setHeader("Cache-Control", "no-store, max-age=11");
 			}
 			if (!response.getHeader("access-control-expose-headers")) {
 				response.setHeader(
@@ -48,14 +48,11 @@ export function handleResponse<T>(
 			if (!response.getHeader("timing-allow-origin")) {
 				response.setHeader("timing-allow-origin", "*");
 			}
-			const aux = JSON.stringify(result);
-			response.setHeader("Content-Length", aux.toString());
 			response.setHeader("transfer-encoding", "");
 
-			Lumberjack.info(`NICHOC TOGO HTTP Historian Utils`);
+			Lumberjack.info(`NICHOC NOGO HTTP Historian Utils`);
 			onSuccess(result);
-			//			response.status(successStatus).json(result);
-			response.status(successStatus).send(aux);
+			response.status(successStatus).json(result);
 		},
 		(error) => {
 			// Only log unexpected errors on the assumption that explicitly thrown
