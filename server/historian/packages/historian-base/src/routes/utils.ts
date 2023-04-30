@@ -48,8 +48,9 @@ export function handleResponse<T>(
 			if (!response.getHeader("timing-allow-origin")) {
 				response.setHeader("timing-allow-origin", "*");
 			}
+			response.setHeader("transfer-encoding", "");
 
-			Lumberjack.info(`NICHOC HTTP Historian Utils`);
+			Lumberjack.info(`NICHOCGO HTTP Historian Utils`);
 			onSuccess(result);
 			response.status(successStatus).json(result);
 		},
