@@ -48,11 +48,14 @@ export function handleResponse<T>(
 			if (!response.getHeader("timing-allow-origin")) {
 				response.setHeader("timing-allow-origin", "*");
 			}
+			const aux = JSON.stringify(result);
+			response.header('Content-Length', aux.toString());
 			response.setHeader("transfer-encoding", "");
 
-			Lumberjack.info(`NICHOCGO HTTP Historian Utils`);
+			Lumberjack.info(`NICHOC TOGO HTTP Historian Utils`);
 			onSuccess(result);
-			response.status(successStatus).json(result);
+//			response.status(successStatus).json(result);
+			response.status(successStatus).send(aux);
 		},
 		(error) => {
 			// Only log unexpected errors on the assumption that explicitly thrown
