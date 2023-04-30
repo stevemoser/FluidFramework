@@ -49,12 +49,12 @@ export function handleResponse<T>(
 				response.setHeader("timing-allow-origin", "*");
 			}
 			const aux = JSON.stringify(result);
-			response.header('Content-Length', aux.toString());
+			response.header("Content-Length", aux.toString());
 			response.setHeader("transfer-encoding", "");
 
 			Lumberjack.info(`NICHOC TOGO HTTP Historian Utils`);
 			onSuccess(result);
-//			response.status(successStatus).json(result);
+			//			response.status(successStatus).json(result);
 			response.status(successStatus).send(aux);
 		},
 		(error) => {
