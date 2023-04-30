@@ -48,7 +48,7 @@ export function handleResponse<T>(
 			if (!response.getHeader("timing-allow-origin")) {
 				response.setHeader("timing-allow-origin", "*");
 			}
-			response.setHeader("transfer-encoding", "gzip");
+			response.setHeader("transfer-encoding", "");
 
 			Lumberjack.info(`NICHOC NOGO HTTP Historian Utils`);
 			onSuccess(result);
