@@ -37,7 +37,7 @@ export function handleResponse<T>(
 			if (allowClientCache === true) {
 				response.setHeader("Cache-Control", "public, max-age=31535999");
 			} else if (allowClientCache === false) {
-				response.setHeader("Cache-Control", "no-store, max-age=0");
+				response.setHeader("Cache-Control", "no-store, max-age=1");
 			}
 			if (!response.getHeader("access-control-expose-headers")) {
 				response.setHeader(
@@ -49,6 +49,7 @@ export function handleResponse<T>(
 				response.setHeader("timing-allow-origin", "*");
 			}
 
+			Lumberjack.info(`NICHOC HTTP Historian Utils`);
 			onSuccess(result);
 			response.status(successStatus).json(result);
 		},

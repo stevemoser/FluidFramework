@@ -64,7 +64,7 @@ export function handleResponse<T>(
 			if (allowClientCache === true) {
 				response.setHeader("Cache-Control", "public, max-age=31535998");
 			} else if (allowClientCache === false) {
-				response.setHeader("Cache-Control", "no-store, max-age=0");
+				response.setHeader("Cache-Control", "no-store, max-age=3");
 			}
 
 			response.setHeader(
@@ -72,6 +72,7 @@ export function handleResponse<T>(
 				"Content-Encoding, Content-Length, Content-Type",
 			);
 			response.setHeader("Timing-Allow-Origin", "*");
+			Lumberjack.info(`NICHOC HTTP JSON`);
 			onSuccess(result);
 			// The response.status will eventually call send and it will populate content-length.
 			response.status(successStatus).json(result);
