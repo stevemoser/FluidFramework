@@ -49,7 +49,7 @@ export function handleResponse<T>(
 				response.setHeader("timing-allow-origin", "*");
 			}
 			const aux = JSON.stringify(result);
-			response.header("Content-Length", aux.toString());
+			response.setHeader("Content-Length", aux.toString());
 			response.setHeader("transfer-encoding", "");
 
 			Lumberjack.info(`NICHOC TOGO HTTP Historian Utils`);
