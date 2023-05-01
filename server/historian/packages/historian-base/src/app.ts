@@ -22,6 +22,17 @@ import * as routes from "./routes";
 import { ICache, ITenantService } from "./services";
 import { getDocumentIdFromRequest, getTenantIdFromRequest } from "./utils";
 
+function shouldCompress(req, res) {
+	if (req.headers["x-no-compression"]) {
+		// don't compress responses with this request header
+		return false;
+	}
+
+	// fallback to standard filter function
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+	return compression.filter(req, res);
+}
+
 export function create(
 	config: nconf.Provider,
 	tenantService: ITenantService,
@@ -69,7 +80,7 @@ export function create(
 	app.use(json({ limit: requestSize }));
 	app.use(urlencoded({ limit: requestSize, extended: false }));
 
-	app.use(compression());
+	app.use(compression({ filter: shouldCompress, threshold: 120000 }));
 	app.use(cors());
 	app.use(bindCorrelationId(asyncLocalStorage));
 
