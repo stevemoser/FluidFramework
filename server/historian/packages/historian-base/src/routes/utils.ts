@@ -48,9 +48,7 @@ export function handleResponse<T>(
 			if (!response.getHeader("timing-allow-origin")) {
 				response.setHeader("timing-allow-origin", "*");
 			}
-			response.setHeader("x-no-compression", "");
-
-			Lumberjack.info(`NICHOC NOGO HTTP Historian Utils`);
+			Lumberjack.info(`NICHOC COMPreSSION HTTP Historian Utils`);
 			onSuccess(result);
 			response.status(successStatus).json(result);
 		},
