@@ -28,7 +28,7 @@ export async function deliCreate(
 	const kafkaReplicationFactor = config.get("kafka:lib:replicationFactor");
 	const kafkaMaxBatchSize = config.get("kafka:lib:maxBatchSize");
 	const kafkaSslCACertFilePath: string = config.get("kafka:lib:sslCACertFilePath");
-    const eventHubConnString: string = config.get("kafka:lib:eventHubConnString");
+	const eventHubConnString: string = config.get("kafka:lib:eventHubConnString");
 
 	const kafkaForwardClientId = config.get("deli:kafkaClientId");
 	const kafkaReverseClientId = config.get("alfred:kafkaClientId");
@@ -82,7 +82,7 @@ export async function deliCreate(
 		kafkaReplicationFactor,
 		kafkaMaxBatchSize,
 		kafkaSslCACertFilePath,
-        eventHubConnString,
+		eventHubConnString,
 	);
 	const reverseProducer = services.createProducer(
 		kafkaLibrary,
@@ -95,7 +95,7 @@ export async function deliCreate(
 		kafkaReplicationFactor,
 		kafkaMaxBatchSize,
 		kafkaSslCACertFilePath,
-        eventHubConnString,
+		eventHubConnString,
 	);
 
 	const redisConfig = config.get("redis");

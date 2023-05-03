@@ -44,7 +44,7 @@ export interface IKafkaProducerOptions extends Partial<IKafkaBaseOptions> {
 
 	pollIntervalMs: number;
 	maxMessageSize: number;
-    eventHubConnString?: string;
+	eventHubConnString?: string;
 }
 
 /**
@@ -122,17 +122,15 @@ export class RdkafkaProducer extends RdkafkaBase implements IProducer {
 			"batch.num.messages": 10000,
 			...this.producerOptions.additionalOptions,
 			...this.sslOptions,
-            "metadata.max.age.ms": 180000,
-            "retries": 2,
+			"metadata.max.age.ms": 180000,
+			"retries": 2,
 		};
 
-		const producer: kafkaTypes.Producer = this.connectingProducer =
-			new this.kafka.HighLevelProducer(
-                options,
-                {
-                    ...this.producerOptions.topicConfig,
-                    "request.timeout.ms": 45000
-                });
+		const producer: kafkaTypes.Producer = (this.connectingProducer =
+			new this.kafka.HighLevelProducer(options, {
+				...this.producerOptions.topicConfig,
+				"request.timeout.ms": 45000,
+			}));
 
 		producer.on("ready", () => {
 			this.connectedProducer = producer;

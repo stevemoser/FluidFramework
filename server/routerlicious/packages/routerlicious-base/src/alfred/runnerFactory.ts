@@ -144,18 +144,19 @@ export class AlfredResourcesFactory implements core.IResourcesFactory<AlfredReso
 		const kafkaSslCACertFilePath: string = config.get("kafka:lib:sslCACertFilePath");
 		const eventHubConnString: string = config.get("kafka:lib:eventHubConnString");
 
-        const producer = services.createProducer(
-            kafkaLibrary,
-            kafkaEndpoint,
-            kafkaClientId,
-            topic,
-            false,
-            kafkaProducerPollIntervalMs,
-            kafkaNumberOfPartitions,
-            kafkaReplicationFactor,
-            kafkaMaxBatchSize,
-            kafkaSslCACertFilePath,
-            eventHubConnString);
+		const producer = services.createProducer(
+			kafkaLibrary,
+			kafkaEndpoint,
+			kafkaClientId,
+			topic,
+			false,
+			kafkaProducerPollIntervalMs,
+			kafkaNumberOfPartitions,
+			kafkaReplicationFactor,
+			kafkaMaxBatchSize,
+			kafkaSslCACertFilePath,
+			eventHubConnString,
+		);
 
 		const redisConfig = config.get("redis");
 		const webSocketLibrary = config.get("alfred:webSocketLib");

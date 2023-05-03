@@ -122,7 +122,7 @@ export class RdkafkaConsumer extends RdkafkaBase implements IConsumer {
 			"offset_commit_cb": true,
 			"rebalance_cb": this.consumerOptions.optimizedRebalance
 				? (err: kafkaTypes.LibrdKafkaError, assignments: kafkaTypes.Assignment[]) =>
-					this.rebalance(consumer, err, assignments)
+						this.rebalance(consumer, err, assignments)
 				: true,
 			...this.consumerOptions.additionalOptions,
 			...this.sslOptions,
