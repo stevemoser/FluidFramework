@@ -45,12 +45,7 @@ import {
 	CheckpointReason,
 	ICheckpoint,
 } from "../utils";
-import {
-	ICheckpointManager,
-	IPendingMessageReader,
-	ISummaryReader,
-	ISummaryWriter,
-} from "./interfaces";
+import { ICheckpointManager, IPendingMessageReader, ISummaryWriter } from "./interfaces";
 import { initializeProtocol, sendToDeli } from "./utils";
 
 export class ScribeLambda implements IPartitionLambda {
@@ -76,6 +71,9 @@ export class ScribeLambda implements IPartitionLambda {
 	// Seqeunce number of the last summarised op
 	private lastSummarySequenceNumber: number | undefined;
 
+	// Refs of the service summaries generated since the last client generated summary.
+	private validParentSummaries: string[] | undefined;
+
 	// Indicates whether cache needs to be cleaned after processing a message
 	private clearCache: boolean = false;
 
@@ -96,17 +94,16 @@ export class ScribeLambda implements IPartitionLambda {
 		protected tenantId: string,
 		protected documentId: string,
 		private readonly summaryWriter: ISummaryWriter,
-		private readonly summaryReader: ISummaryReader,
 		private readonly pendingMessageReader: IPendingMessageReader | undefined,
 		private readonly checkpointManager: ICheckpointManager,
 		scribe: IScribe,
 		private readonly serviceConfiguration: IServiceConfiguration,
 		private readonly producer: IProducer | undefined,
 		private protocolHandler: ProtocolOpHandler,
-		private term: number,
 		private protocolHead: number,
 		messages: ISequencedDocumentMessage[],
 		private scribeSessionMetric: Lumber<LumberEventName.ScribeSessionResult> | undefined,
+		private readonly transientTenants: Set<string>,
 	) {
 		this.lastOffset = scribe.logOffset;
 		this.setStateFromCheckpoint(scribe);
@@ -127,38 +124,6 @@ export class ScribeLambda implements IPartitionLambda {
 		for (const baseMessage of boxcar.contents) {
 			if (baseMessage.type === SequencedOperationType) {
 				const value = baseMessage as ISequencedOperationMessage;
-
-				// The following block is only invoked once deli enables term flipping.
-				if (this.term && value.operation.term) {
-					if (value.operation.term < this.term) {
-						continue;
-					} else if (value.operation.term > this.term) {
-						const lastSummary = await this.summaryReader.readLastSummary();
-						if (!lastSummary.fromSummary) {
-							const errorMsg = `Required summary can't be fetched`;
-							throw Error(errorMsg);
-						}
-						this.term = lastSummary.term;
-						const lastScribe = JSON.parse(lastSummary.scribe) as IScribe;
-						this.updateProtocolHead(lastSummary.protocolHead);
-						this.protocolHandler = initializeProtocol(
-							lastScribe.protocolState,
-							this.term,
-						);
-						this.setStateFromCheckpoint(lastScribe);
-						this.pendingMessages = new Deque<ISequencedDocumentMessage>(
-							lastSummary.messages.filter(
-								(op) => op.sequenceNumber > lastScribe.protocolState.sequenceNumber,
-							),
-						);
-
-						this.pendingP = undefined;
-						this.pendingCheckpointScribe = undefined;
-						this.pendingCheckpointOffset = undefined;
-
-						await this.checkpointManager.delete(lastScribe.sequenceNumber + 1, false);
-					}
-				}
 
 				// Skip messages that were already checkpointed on a prior run.
 				if (value.operation.sequenceNumber <= this.sequenceNumber) {
@@ -344,7 +309,12 @@ export class ScribeLambda implements IPartitionLambda {
 						`${value.operation.minimumSequenceNumber} != ${value.operation.sequenceNumber}`,
 					);
 					this.noActiveClients = true;
-					if (this.serviceConfiguration.scribe.generateServiceSummary) {
+					const isTransientTenant = this.transientTenants.has(this.tenantId);
+
+					if (
+						this.serviceConfiguration.scribe.generateServiceSummary &&
+						!isTransientTenant
+					) {
 						const operation = value.operation as ISequencedDocumentAugmentedMessage;
 						const scribeCheckpoint = this.generateScribeCheckpoint(this.lastOffset);
 						try {
@@ -367,6 +337,9 @@ export class ScribeLambda implements IPartitionLambda {
 									this.serviceConfiguration.scribe.clearCacheAfterServiceSummary,
 								);
 								this.updateLastSummarySequenceNumber(operation.sequenceNumber);
+								// Add service summary handle to validParentSummaries so that SummaryWriter knows it is a valid
+								// alternate parent summary handle. Otherwise only lastClientSummaryHead and latest service summary are accepted.
+								this.updateValidParentSummaries(summaryResponse);
 								const summaryResult = `Service summary success @${operation.sequenceNumber}`;
 								this.context.log?.info(summaryResult, {
 									messageMetaData: {
@@ -407,6 +380,10 @@ export class ScribeLambda implements IPartitionLambda {
 						? JSON.parse(operation.data)
 						: operation.contents;
 					this.lastClientSummaryHead = content.handle;
+					// Similar to lastClientSummaryHead, only reset validParentSummaries to undefined
+					// once a new official client summary ack is receieved.
+					// It will be updated to an array if/when summary handles are added.
+					this.validParentSummaries = undefined;
 					// An external summary writer can only update the protocolHead when the ack is sequenced
 					// back to the stream.
 					if (this.summaryWriter.isExternal) {
@@ -535,7 +512,7 @@ export class ScribeLambda implements IPartitionLambda {
 		protocolState: IProtocolState,
 		pendingOps: ISequencedDocumentMessage[],
 	) {
-		this.protocolHandler = initializeProtocol(protocolState, this.term);
+		this.protocolHandler = initializeProtocol(protocolState);
 		this.pendingMessages = new Deque(pendingOps);
 	}
 
@@ -548,6 +525,7 @@ export class ScribeLambda implements IPartitionLambda {
 			minimumSequenceNumber: this.minSequenceNumber,
 			protocolState,
 			sequenceNumber: this.sequenceNumber,
+			validParentSummaries: this.validParentSummaries,
 		};
 		return checkpoint;
 	}
@@ -596,7 +574,12 @@ export class ScribeLambda implements IPartitionLambda {
 
 	private async writeCheckpoint(checkpoint: IScribe) {
 		const inserts = this.pendingCheckpointMessages.toArray();
-		await this.checkpointManager.write(checkpoint, this.protocolHead, inserts);
+		await this.checkpointManager.write(
+			checkpoint,
+			this.protocolHead,
+			inserts,
+			this.noActiveClients,
+		);
 		if (inserts.length > 0) {
 			// Since we are storing logTails with every summary, we need to make sure that messages are either in DB
 			// or in memory. In other words, we can only remove messages from memory once there is a copy in the DB
@@ -628,6 +611,17 @@ export class ScribeLambda implements IPartitionLambda {
 	 */
 	private updateLastSummarySequenceNumber(summarySequenceNumber: number) {
 		this.lastSummarySequenceNumber = summarySequenceNumber;
+	}
+
+	/**
+	 * validParentSummaries tracks summary handles for service summaries that have been written since the latest client summary.
+	 * @param summaryHandle - The handle for a service summary that occurred after latest client summary.
+	 */
+	private updateValidParentSummaries(summaryHandle: string) {
+		if (this.validParentSummaries === undefined) {
+			this.validParentSummaries = [];
+		}
+		this.validParentSummaries.push(summaryHandle);
 	}
 
 	private async sendSummaryAck(contents: ISummaryAck) {
@@ -691,6 +685,7 @@ export class ScribeLambda implements IPartitionLambda {
 		this.minSequenceNumber = scribe.minimumSequenceNumber;
 		this.lastClientSummaryHead = scribe.lastClientSummaryHead;
 		this.lastSummarySequenceNumber = scribe.lastSummarySequenceNumber;
+		this.validParentSummaries = scribe.validParentSummaries;
 	}
 
 	private updateCheckpointMessages(message: IQueuedMessage) {

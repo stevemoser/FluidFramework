@@ -4,8 +4,8 @@
  */
 
 /**
- * The message {@link IDebuggerMessage.source} for all messages posted by the Client Debugger.
+ * The message {@link ISourcedDevtoolsMessage.source} for all messages posted by the Client Debugger.
  *
- * @public
+ * @internal
  */
-export const debuggerMessageSource: string = "fluid-client-debugger";
+export const devtoolsMessageSource: string = "fluid-client-devtools";
