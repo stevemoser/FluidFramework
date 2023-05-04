@@ -304,7 +304,7 @@ export function configureWebSocketServices(
 						claims.jti,
 					);
 					if (isTokenRevoked) {
-						throw new NetworkError(
+						throw new core.TokenRevokedError(
 							403,
 							"Permission denied. Token has been revoked",
 							false /* canRetry */,
