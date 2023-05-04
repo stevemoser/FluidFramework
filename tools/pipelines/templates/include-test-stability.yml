@@ -131,7 +131,7 @@ jobs:
               customCommand: 'run ${{ taskTestStep }}:coverage'
             condition: and(succeededOrFailed(), eq(variables['startTest'], 'true'))
             env: 
-              publishTinyliciousLog: ${{ if eq(variables['testResult'], 'Failed'), 'true', 'false' }}
+              publishTinyliciousLog: ${{ if variables['testResult'] == 'Failed', 'true', 'false' }}
         # Test - No coverage
         - ${{ if or(eq(variables['testCoverage'], false), eq(startsWith(taskTestStep, 'ci:test'), false)) }}:
             - task: Npm@1
