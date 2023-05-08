@@ -143,7 +143,6 @@ jobs:
         # Rename the failed tinylicious log
         - task: Bash@3
           displayName: Rename tinylicious log
-          dependsOn: ${{ replace(taskTestStep, ':', '_' ) }}
           inputs: 
             workingDirectory: ${{ parameters.buildDirectory }}
             script: | 
