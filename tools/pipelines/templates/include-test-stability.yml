@@ -150,7 +150,7 @@ jobs:
               oldname=$(parameters.buildDirectory)/packages/test/test-end-to-end-tests/tinylicious.log 
               newname=$(echo $oldname | sed 's/\.log$/'"_${parameters.stageName}.log"/)
               mv "$oldname" "$newname"
-          condition: and(failed(), contains(${{ taskTestStep }}, 'tinylicious'))
+          condition: and(failed(), contains('${{ taskTestStep }}', 'tinylicious'))
       
       # Test - Upload results
       - task: PublishTestResults@2
