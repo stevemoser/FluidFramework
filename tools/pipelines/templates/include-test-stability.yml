@@ -145,8 +145,7 @@ jobs:
           displayName: Rename tinylicious log
           inputs: 
             workingDirectory: ${{ parameters.buildDirectory }}
-            script: | 
-              mv $(parameters.buildDirectory)/packages/test/test-end-to-end-tests/tinylicious.log $(parameters.buildDirectory)/packages/test/test-end-to-end-tests/newtinylicious.log
+            script: |
               oldname=$(parameters.buildDirectory)/packages/test/test-end-to-end-tests/tinylicious.log 
               newname=$(echo $oldname | sed 's/\.log$/'"_${parameters.stageName}.log"/)
               mv "$oldname" "$newname"
