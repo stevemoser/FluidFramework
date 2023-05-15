@@ -150,7 +150,7 @@ jobs:
               echo "Old name: $oldname" 
               newname=$(echo $oldname | sed 's/\.log$/'"_${{ parameters.stageName }}.log"/)
               echo "New name: $newname"
-              mv "$oldname" "$newname"
+              mv $oldname $newname
           condition: and(failed(), contains('${{ taskTestStep }}', 'tinylicious'))
         # Publish tinylicious log for troubleshooting
         - task: PublishPipelineArtifact@1
