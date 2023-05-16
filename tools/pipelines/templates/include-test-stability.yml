@@ -150,8 +150,9 @@ jobs:
               echo "Logging the failed tests";
               pwd;
               oldname=${{ parameters.buildDirectory }}/packages/test/test-end-to-end-tests/tinylicious.log
+              stageName=${{ parameters.stageName }}
               echo "Old name: $oldname" 
-              newname=$(echo $oldname | sed 's/\.log$/'"_${{ parameters.stageName }}.log"/)
+              newname=$(echo $oldname | sed 's/\.log$/'"_$stageName.log"/)
               echo "New name: $newname"
               mv $oldname $newname
           condition: and(failed(), contains('${{ taskTestStep }}', 'tinylicious'))
@@ -159,8 +160,8 @@ jobs:
         - task: PublishPipelineArtifact@1
           displayName: Publish Artifact - Tinylicious Log
           inputs:
-            targetPath: '${{ parameters.buildDirectory }}/packages/test/test-end-to-end-tests/tinylicious_$(parameters.stageName).log'
-            artifactName: 'tinyliciousLog_$(parameters.stageName)'
+            targetPath: '${{ parameters.buildDirectory }}/packages/test/test-end-to-end-tests/tinylicious_${{ parameters.stageName }}.log'
+            artifactName: 'tinyliciousLog_${{ parameters.stageName }}'
             publishLocation: 'pipeline'
           condition: and(failed(), contains('${{ taskTestStep }}', 'tinylicious'))
           continueOnError: true # Keep running subsequent tasks even if this one fails (e.g. the tinylicious log wasn't there)
