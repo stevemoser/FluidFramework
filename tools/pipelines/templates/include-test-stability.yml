@@ -146,6 +146,8 @@ jobs:
           inputs: 
             workingDirectory: ${{ parameters.buildDirectory }}
             script: |
+              echo "Logging the failed tests";
+              pwd;
               oldname=${{ parameters.buildDirectory }}/packages/test/test-end-to-end-tests/tinylicious.log
               echo "Old name: $oldname" 
               newname=$(echo $oldname | sed 's/\.log$/'"_${{ parameters.stageName }}.log"/)
