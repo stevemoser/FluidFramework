@@ -144,6 +144,7 @@ jobs:
         - task: Bash@3
           displayName: Rename tinylicious log
           inputs: 
+            targetType: 'inline'
             workingDirectory: ${{ parameters.buildDirectory }}
             script: |
               echo "Logging the failed tests";
