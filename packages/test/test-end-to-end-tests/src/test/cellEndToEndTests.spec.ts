@@ -117,7 +117,7 @@ describeFullCompat("SharedCell", (getTestObjectProvider) => {
 
 		await provider.ensureSynchronized();
 
-		verifyCellValues(newCellValue, newCellValue, initialCellValue);
+		verifyCellValues(newCellValue, newCellValue, newCellValue);
 	});
 
 	it("can delete cell data in 3 containers correctly", async () => {
