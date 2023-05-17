@@ -151,6 +151,7 @@ jobs:
               pwd;
               oldname=${{ parameters.buildDirectory }}/packages/test/test-end-to-end-tests/tinylicious.log
               stageName=${{ parameters.stageName }}
+              echo "The current stage: $stageName"
               echo "Old name: $oldname" 
               newname=$(echo $oldname | sed 's/\.log$/'"_$stageName.log"/)
               echo "New name: $newname"
