@@ -147,14 +147,9 @@ jobs:
             targetType: 'inline'
             workingDirectory: ${{ parameters.buildDirectory }}
             script: |
-              echo "Logging the failed tests";
-              pwd;
               oldname=${{ parameters.buildDirectory }}/packages/test/test-end-to-end-tests/tinylicious.log
               stageName=${{ parameters.stageName }}
-              echo "The current stage: $stageName"
-              echo "Old name: $oldname" 
               newname=$(echo $oldname | sed 's/\.log$/'"_$stageName.log"/)
-              echo "New name: $newname"
               mv $oldname $newname
           condition: and(failed(), contains('${{ taskTestStep }}', 'tinylicious'))
         # Publish tinylicious log for troubleshooting
