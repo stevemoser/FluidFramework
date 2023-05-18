@@ -5,13 +5,16 @@
 
 import { AsyncLocalStorage } from "async_hooks";
 import * as git from "@fluidframework/gitresources";
-import { IThrottler, ITokenRevocationManager } from "@fluidframework/server-services-core";
+import {
+	IStorageNameRetriever,
+	IThrottler,
+	ITokenRevocationManager,
+} from "@fluidframework/server-services-core";
 import {
 	IThrottleMiddlewareOptions,
 	throttle,
 	getParam,
 } from "@fluidframework/server-services-utils";
-import { Lumberjack } from "@fluidframework/server-services-telemetry";
 import { Router } from "express";
 import * as nconf from "nconf";
 import winston from "winston";
@@ -22,6 +25,7 @@ import { Constants } from "../../utils";
 export function create(
 	config: nconf.Provider,
 	tenantService: ITenantService,
+	storageNameRetriever: IStorageNameRetriever,
 	restTenantThrottlers: Map<string, IThrottler>,
 	cache?: ICache,
 	asyncLocalStorage?: AsyncLocalStorage<string>,
@@ -47,6 +51,7 @@ export function create(
 			tenantId,
 			authorization,
 			tenantService,
+			storageNameRetriever,
 			cache,
 			asyncLocalStorage,
 		});
@@ -64,6 +69,7 @@ export function create(
 			tenantId,
 			authorization,
 			tenantService,
+			storageNameRetriever,
 			cache,
 			asyncLocalStorage,
 		});
@@ -140,23 +146,18 @@ export function create(
 			blobP.then(
 				(blob) => {
 					if (useCache) {
-						response.setHeader("Cache-Control", "public, max-age=31535997");
+						response.setHeader("Cache-Control", "public, max-age=31536000");
 					}
-					if (!response.getHeader("access-control-expose-headers")) {
-						response.setHeader(
-							"access-control-expose-headers",
-							"content-encoding, content-length, content-type",
-						);
-					}
-					if (!response.getHeader("timing-allow-origin")) {
-						response.setHeader("timing-allow-origin", "*");
-					}
-					const stream = Buffer.from(blob.content, "base64");
-					response.status(200).write(stream, () => {
-						Lumberjack.info(`Nichoc content ${stream.length}`);
-						response.setHeader("content-length", stream.length);
-						response.end();
-					});
+					// Make sure the browser will expose specific headers for performance analysis.
+					response.setHeader(
+						"Access-Control-Expose-Headers",
+						"Content-Encoding, Content-Length, Content-Type",
+					);
+					// In order to report W3C timings, Time-Allow-Origin needs to be set.
+					response.setHeader("Timing-Allow-Origin", "*");
+					response
+						.status(200)
+						.write(Buffer.from(blob.content, "base64"), () => response.end());
 				},
 				(error) => {
 					response.status(error?.code ?? 400).json(error?.message ?? error);

@@ -62,19 +62,19 @@ export function handleResponse<T>(
 	resultP.then(
 		(result) => {
 			if (allowClientCache === true) {
-				response.setHeader("Cache-Control", "public, max-age=31535998");
+				response.setHeader("Cache-Control", "public, max-age=31536000");
 			} else if (allowClientCache === false) {
-				response.setHeader("Cache-Control", "no-store, max-age=3");
+				response.setHeader("Cache-Control", "no-store, max-age=0");
 			}
-
+			// Make sure the browser will expose specific headers for performance analysis.
 			response.setHeader(
 				"Access-Control-Expose-Headers",
 				"Content-Encoding, Content-Length, Content-Type",
 			);
+			// In order to report W3C timings, Time-Allow-Origin needs to be set.
 			response.setHeader("Timing-Allow-Origin", "*");
-			Lumberjack.info(`NICHOC HTTP JSON`);
 			onSuccess(result);
-			// The response.status will eventually call send and it will populate content-length.
+			// Express' json call below will set the content-length.
 			response.status(successStatus).json(result);
 		},
 		(error) => {
