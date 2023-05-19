@@ -662,10 +662,12 @@ stages:
               echo https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2
               echo TOKEN=
               echo $ADO_API_TOKEN
-              curl -H 'Authorization:Bearer $(System.AccessToken)' https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2 -o output.json -D - -s
-
+              curl -H 'Authorization:Bearer $(System.AccessToken)' https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2 -o ./output.json -D - -s
+              curl -H 'Authorization:Bearer $(System.AccessToken)' -s -L -D - https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2 -o ./output1.json -w '%{url_effective}'
               ls -laR ./output.json;
               cat ./output.json;
+              ls -laR ./output1.json;
+              cat ./output1.json;
           env:
             BUILD_ID: $(Build.BuildId)
             ADO_API_TOKEN: $(System.AccessToken)
