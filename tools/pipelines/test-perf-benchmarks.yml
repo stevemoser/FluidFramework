@@ -612,31 +612,31 @@ stages:
                 echo "Cleanup  ${{ variables.memoryUsageTestOutputFolder }}"
                 rm -rf ${{ variables.memoryUsageTestOutputFolder }};
 
-- stage: runLast
-  condition: always()
-  dependsOn:
-    - perf_unit_tests_runtime
-    - perf_unit_tests_memory
-    - perf_e2e_tests_local
-    - perf_e2e_tests_odsp
-    - perf_e2e_tests_frs
+  - stage: runLast
+    condition: always()
+    dependsOn:
+      - perf_unit_tests_runtime
+      - perf_unit_tests_memory
+      - perf_e2e_tests_local
+      - perf_e2e_tests_odsp
+      - perf_e2e_tests_frs
 
-    jobs:
-      - job: uploadTiming
-        displayName: Upload Timing
-        steps:
+      jobs:
+        - job: uploadTiming
+          displayName: Upload Timing
+          steps:
 
-        - task: Bash@3
-          displayName: Retrieve buildId results
-          inputs:
-            targetType: 'inline'
-            workingDirectory: $(toolAbsolutePath)
-            script: |
-              echo "Getting BuildId ..."
-              $url = "https://dev.azure.com/fluidframework/internal/_build/results?buildId=$($env:BUILD_ID)&__rt=fps&__ver=2"
-              curl $url -H  "Authorization:Bearer $env:SYSTEM_ACCESSTOKEN" -o output.json -D - -s
+          - task: Bash@3
+            displayName: Retrieve buildId results
+            inputs:
+              targetType: 'inline'
+              workingDirectory: $(toolAbsolutePath)
+              script: |
+                echo "Getting BuildId ..."
+                $url = "https://dev.azure.com/fluidframework/internal/_build/results?buildId=$($env:BUILD_ID)&__rt=fps&__ver=2"
+                curl $url -H  "Authorization:Bearer $env:SYSTEM_ACCESSTOKEN" -o output.json -D - -s
 
-              ls -laR ./output.json;
-              cat ./output.json;
-          env:
-            BUILD_ID: $(Build.BuildId)
+                ls -laR ./output.json;
+                cat ./output.json;
+            env:
+              BUILD_ID: $(Build.BuildId)
