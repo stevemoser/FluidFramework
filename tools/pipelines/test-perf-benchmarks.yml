@@ -107,34 +107,6 @@ stages:
             # allowPartiallySucceededBuilds: true # No effect as long as we have buildVersionToDownload: specific
             # branchName: $(Build.SourceBranch)   # No effect as long as we have buildVersionToDownload: specific
 
-  - stage: runLast1
-    condition: always()
-    dependsOn:
-      - perf_unit_tests_runtime
-
-    jobs:
-      - job: uploadTiming1
-        displayName: Upload Timing1
-        steps:
-
-        - task: Bash@3
-          displayName: Retrieve buildId results
-          inputs:
-            targetType: 'inline'
-            workingDirectory: $(toolAbsolutePath)
-            script: |
-              echo "Getting BuildId ..."
-              URL="https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(BUILD_ID)&__rt=fps&__ver=2"
-              echo `URL: $URL`
-              echo `Authorization:Bearer $ADO_API_TOKEN`
-              curl $URL -H "Authorization:Bearer $ADO_API_TOKEN" -o output.json -D - -s
-
-              ls -laR ./output.json;
-              cat ./output.json;
-          env:
-            BUILD_ID: $(Build.BuildId)
-            ADO_API_TOKEN: $(System.AccessToken)
-
         # Run tests for each package that has them
         - ${{ each testPackage in parameters.executionTestPackages }}:
 
@@ -663,6 +635,34 @@ stages:
               echo "Getting BuildId ..."
               URL="https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(BUILD_ID)&__rt=fps&__ver=2"
               curl $URL -H  "Authorization:Bearer $ADO_API_TOKEN" -o output.json -D - -s
+
+              ls -laR ./output.json;
+              cat ./output.json;
+          env:
+            BUILD_ID: $(Build.BuildId)
+            ADO_API_TOKEN: $(System.AccessToken)
+
+  - stage: runLast1
+    condition: always()
+    dependsOn:
+      - perf_unit_tests_runtime
+
+    jobs:
+      - job: uploadTiming1
+        displayName: Upload Timing1
+        steps:
+
+        - task: Bash@3
+          displayName: Retrieve buildId results1
+          inputs:
+            targetType: 'inline'
+            workingDirectory: $(toolAbsolutePath)
+            script: |
+              echo "Getting BuildId ..."
+              URL="https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(BUILD_ID)&__rt=fps&__ver=2"
+              echo `URL: $URL`
+              echo `Authorization:Bearer $ADO_API_TOKEN`
+              curl $URL -H "Authorization:Bearer $ADO_API_TOKEN" -o output.json -D - -s
 
               ls -laR ./output.json;
               cat ./output.json;
