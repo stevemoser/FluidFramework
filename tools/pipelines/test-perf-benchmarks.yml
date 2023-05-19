@@ -659,10 +659,9 @@ stages:
             workingDirectory: $(toolAbsolutePath)
             script: |
               echo "Getting BuildId ..."
-              URL=https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2
-              echo $URL
+              echo https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2
               echo $ADO_API_TOKEN
-              curl $URL -H "Authorization:Bearer $(System.AccessToken)" -o output.json -D - -s
+              curl https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2 -H "Authorization:Bearer $(System.AccessToken)" -o output.json -D - -s
 
               ls -laR ./output.json;
               cat ./output.json;
