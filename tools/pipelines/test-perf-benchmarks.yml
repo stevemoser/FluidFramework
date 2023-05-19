@@ -107,6 +107,31 @@ stages:
             # allowPartiallySucceededBuilds: true # No effect as long as we have buildVersionToDownload: specific
             # branchName: $(Build.SourceBranch)   # No effect as long as we have buildVersionToDownload: specific
 
+  - stage: runLast1
+    condition: always()
+    dependsOn:
+      - perf_unit_tests_runtime
+
+    jobs:
+      - job: uploadTiming1
+        displayName: Upload Timing1
+        steps:
+
+        - task: Bash@3
+          displayName: Retrieve buildId results
+          inputs:
+            targetType: 'inline'
+            workingDirectory: $(toolAbsolutePath)
+            script: |
+              echo "Getting BuildId ..."
+              $url = "https://dev.azure.com/fluidframework/internal/_build/results?buildId=$($env:BUILD_ID)&__rt=fps&__ver=2"
+              curl $url -H  "Authorization:Bearer $env:SYSTEM_ACCESSTOKEN" -o output.json -D - -s
+
+              ls -laR ./output.json;
+              cat ./output.json;
+          env:
+            BUILD_ID: $(Build.BuildId)
+
         # Run tests for each package that has them
         - ${{ each testPackage in parameters.executionTestPackages }}:
 
