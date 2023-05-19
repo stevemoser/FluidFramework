@@ -662,7 +662,7 @@ stages:
               echo `https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2`
               echo "Executing curl command ..."
               echo "curl -H 'Authorization:Bearer $(System.AccessToken)'  -o output.json -D - -s https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2"
-              curl -H 'Authorization:Bearer $(System.AccessToken)' -o ./output.json -w '%{url_effective}' -s -L -D - https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2 
+              curl -H 'Authorization:Bearer $(System.AccessToken)' -w '%{url_effective}' -s -L -D - https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2 2> ./output.json
               ls -laR ./output.json;
               cat ./output.json;
           env:
