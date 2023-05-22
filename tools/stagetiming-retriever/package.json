@@ -1,12 +1,12 @@
 {
-	"name": "@fluid-tools/stage-retriever",
+	"name": "@fluid-tools/stagetiming-retriever",
 	"version": "1.0.0",
 	"description": "Tool to parse a json file with build info",
 	"homepage": "https://fluidframework.com",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/microsoft/FluidFramework.git",
-		"directory": "tools/stage-retriever"
+		"directory": "tools/stagetiming-retriever"
 	},
 	"license": "MIT",
 	"author": "Microsoft and contributors",
