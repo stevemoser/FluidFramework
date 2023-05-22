@@ -69,6 +69,9 @@ variables:
   - name: toolAbsolutePath
     value: $(Build.SourcesDirectory)/tools/telemetry-generator
     readonly: true
+  - name: toolStageRetrieverPath
+    value: $(Build.SourcesDirectory)/tools/stagetiming-retriever
+    readonly: true
   - group: prague-key-vault
 
 lockBehavior: sequential
@@ -633,11 +636,15 @@ stages:
             workingDirectory: $(toolAbsolutePath)
             script: |
               echo "Getting BuildId ..."
-              URL="https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(BUILD_ID)&__rt=fps&__ver=2"
-              curl $URL -H  "Authorization:Bearer $ADO_API_TOKEN" -o output.json -D - -s
-
+              echo `https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2`
+              echo "Executing curl command ..."
+              echo  'curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline"'
+              curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json 2> ./err.json
               ls -laR ./output.json;
               cat ./output.json;
+              echo "Err output ..."
+              ls -laR ./err.json;
+              cat ./err.json;
           env:
             BUILD_ID: $(Build.BuildId)
             ADO_API_TOKEN: $(System.AccessToken)
@@ -656,18 +663,20 @@ stages:
           displayName: Retrieve buildId results1
           inputs:
             targetType: 'inline'
-            workingDirectory: $(toolAbsolutePath)
+            workingDirectory: $(toolStageRetrieverPath)
             script: |
               echo "Getting BuildId ..."
               echo `https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2`
               echo "Executing curl command ..."
               echo  'curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline"'
-              curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json 2> ./output1.json
+              curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json 2> ./err.json
               ls -laR ./output.json;
               cat ./output.json;
               echo "Err output ..."
-              ls -laR ./output1.json;
-              cat ./output1.json;
+              ls -laR ./err.json;
+              cat ./err.json;
+              node $(toolStageRetrieverPath)/dist/index.js ./output.json ./outputFinal.json
+              cat ./outputFinal.json;
           env:
             BUILD_ID: $(Build.BuildId)
             ADO_API_TOKEN: $(System.AccessToken)
