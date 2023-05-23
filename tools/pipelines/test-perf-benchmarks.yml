@@ -626,6 +626,18 @@ stages:
         displayName: Upload Timing
         steps:
 
+      - task: Bash@3
+        displayName: 'Prepare telemetry-generator for bundle size'
+        inputs:
+          targetType: 'inline'
+          workingDirectory:  ${{ variables.toolAbsolutePath }}
+          script: |
+            ls -la '${{ variables.toolAbsolutePath }}';
+            ls -la '${{ parameters.buildDirectory }}';
+            npm install @ff-internal/aria-logger;
+            npm i;
+            npm run build:compile;
+
         - task: Bash@3
           displayName: Retrieve buildId results
           inputs:
@@ -634,7 +646,7 @@ stages:
             script: |
               echo "Executing curl command ..."
               echo  'curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline"'
-              curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json 2> /dev/nul
+              curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json
               pwd;
               ls -laR ./output.json;
               cat ./output.json;
