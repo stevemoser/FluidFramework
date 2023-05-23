@@ -630,10 +630,8 @@ stages:
           displayName: 'Prepare telemetry-generator for bundle size'
           inputs:
             targetType: 'inline'
-            workingDirectory:  ${{ variables.toolAbsolutePath }}
+            workingDirectory:  $(toolAbsolutePath)
             script: |
-              ls -la '${{ variables.toolAbsolutePath }}';
-              ls -la '${{ parameters.buildDirectory }}';
               npm install @ff-internal/aria-logger;
               npm i;
               npm run build:compile;
