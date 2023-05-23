@@ -625,7 +625,7 @@ stages:
       - perf_e2e_tests_frs
 
     jobs:
-      - job: uploadTiming
+      - job: uploadTiming1
         displayName: Upload Timing
         steps:
 
@@ -636,47 +636,33 @@ stages:
             workingDirectory: $(toolAbsolutePath)
             script: |
               echo "Getting BuildId ..."
-              echo `https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2`
-              echo "Executing curl command ..."
-              echo  'curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline"'
-              curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json 2> ./err.json
-              ls -laR ./output.json;
-              cat ./output.json;
-              echo "Err output ..."
-              ls -laR ./err.json;
-              cat ./err.json;
           env:
             BUILD_ID: $(Build.BuildId)
             ADO_API_TOKEN: $(System.AccessToken)
 
-  - stage: runLast1
+  - stage: runAfterAll
     condition: always()
     dependsOn:
       - perf_unit_tests_runtime
 
     jobs:
-      - job: uploadTiming1
-        displayName: Upload Timing1
+      - job: uploadTiming
+        displayName: Upload Stage Timing
         steps:
 
         - task: Bash@3
-          displayName: Retrieve buildId results1
+          displayName: Retrieve buildId and stage info
           inputs:
             targetType: 'inline'
-            workingDirectory: $(toolStageRetrieverPath)
+            workingDirectory: $(toolsAbsolutePath)
             script: |
-              echo "Getting BuildId ..."
-              echo `https://dev.azure.com/fluidframework/internal/_build/results?buildId=$(Build.BuildId)&__rt=fps&__ver=2`
               echo "Executing curl command ..."
               echo  'curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline"'
-              curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json 2> ./err.json
+              curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json 2> /dev/nul
+              pwd;
               ls -laR ./output.json;
               cat ./output.json;
-              echo "Err output ..."
-              ls -laR ./err.json;
-              cat ./err.json;
-              node $(toolStageRetrieverPath)/dist/index.js ./output.json ./outputFinal.json
-              cat ./outputFinal.json;
+              node --require @ff-internal/aria-logger bin/run --handlerModule $(Build.SourcesDirectory)/tools/telemetry-generator/dist/handlers/stageTimingRetriever.js --dir './';
           env:
             BUILD_ID: $(Build.BuildId)
             ADO_API_TOKEN: $(System.AccessToken)
