@@ -619,22 +619,11 @@ stages:
       - perf_unit_tests_memory
       - perf_e2e_tests_local
       - perf_e2e_tests_odsp
-      - perf_e2e_tests_frs
 
     jobs:
       - job: uploadTimingLast
         displayName: Upload Timing
         steps:
-
-        - task: Bash@3
-          displayName: 'Prepare telemetry-generator for bundle size'
-          inputs:
-            targetType: 'inline'
-            workingDirectory:  $(toolAbsolutePath)
-            script: |
-              npm install @ff-internal/aria-logger;
-              npm i;
-              npm run build:compile;
 
         - task: Bash@3
           displayName: Retrieve buildId results
@@ -645,43 +634,6 @@ stages:
               echo "Executing curl command ..."
               echo  'curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline"'
               curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json
-              pwd;
-              ls -laR ./output.json;
-              cat ./output.json;
-              node --require @ff-internal/aria-logger bin/run --handlerModule $(Build.SourcesDirectory)/tools/telemetry-generator/dist/handlers/stageTimingRetriever.js --dir './';
-          env:
-            BUILD_ID: $(Build.BuildId)
-            ADO_API_TOKEN: $(System.AccessToken)
-
-  - stage: runAfterUnitTestsRuntime
-    condition: always()
-    dependsOn:
-      - perf_unit_tests_runtime
-
-    jobs:
-      - job: uploadTiming
-        displayName: Upload Stage Timing
-        steps:
-
-        - task: Bash@3
-          displayName: 'Prepare telemetry-generator for bundle size'
-          inputs:
-            targetType: 'inline'
-            workingDirectory:  $(toolAbsolutePath)
-            script: |
-              npm install @ff-internal/aria-logger;
-              npm i;
-              npm run build:compile;
-
-        - task: Bash@3
-          displayName: Retrieve buildId and stage info
-          inputs:
-            targetType: 'inline'
-            workingDirectory: $(toolAbsolutePath)
-            script: |
-              echo "Executing curl command ..."
-              echo  'curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline"'
-              curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json 2> /dev/nul
               pwd;
               ls -laR ./output.json;
               cat ./output.json;
