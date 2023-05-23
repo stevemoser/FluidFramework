@@ -639,11 +639,10 @@ stages:
                 echo  'curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline"'
                 curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > ${{ variables.testWorkspace }}/timingOutput/output.json
                 pwd;
-                ls -laR ./output.json;
-                cat ./output.json;
-                PIPELINE='PerformanceBenchmark'
-                echo $PIPELINE
+                ls -laR ${{ variables.testWorkspace }}/timingOutput/output.json;
+                cat ${{ variables.testWorkspace }}/timingOutput/output.json;
                 node --require @ff-internal/aria-logger bin/run --handlerModule $(Build.SourcesDirectory)/tools/telemetry-generator/dist/handlers/stageTimingRetriever.js --dir '${{ variables.testWorkspace }}/timingOutput/';
             env:
               BUILD_ID: $(Build.BuildId)
               ADO_API_TOKEN: $(System.AccessToken)
+              PIPELINE: 'PerformanceBenchmark'
