@@ -69,9 +69,6 @@ variables:
   - name: toolAbsolutePath
     value: $(Build.SourcesDirectory)/tools/telemetry-generator
     readonly: true
-  - name: toolStageRetrieverPath
-    value: $(Build.SourcesDirectory)/tools/stagetiming-retriever
-    readonly: true
   - group: prague-key-vault
 
 lockBehavior: sequential
@@ -660,7 +657,7 @@ stages:
           displayName: Retrieve buildId and stage info
           inputs:
             targetType: 'inline'
-            workingDirectory: $(toolsAbsolutePath)
+            workingDirectory: $(toolAbsolutePath)
             script: |
               echo "Executing curl command ..."
               echo  'curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline"'
