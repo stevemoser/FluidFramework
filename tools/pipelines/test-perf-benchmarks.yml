@@ -73,7 +73,7 @@ variables:
     value: $(Build.SourcesDirectory)/tools/stagetiming-retriever
     readonly: true
   - name: previous_stages
-    value: ${{ variables.stages[0:length(variables.stages)-1] }}
+    value: ${{ variables.stages[0: length(variables.stages) -1] }}
   - group: prague-key-vault
 
 lockBehavior: sequential
