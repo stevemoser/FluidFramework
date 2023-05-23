@@ -641,6 +641,8 @@ stages:
                 pwd;
                 ls -laR ./output.json;
                 cat ./output.json;
+                PIPELINE='PerformanceBenchmark'
+                echo $PIPELINE
                 node --require @ff-internal/aria-logger bin/run --handlerModule $(Build.SourcesDirectory)/tools/telemetry-generator/dist/handlers/stageTimingRetriever.js --dir '${{ variables.testWorkspace }}/timingOutput/';
             env:
               BUILD_ID: $(Build.BuildId)

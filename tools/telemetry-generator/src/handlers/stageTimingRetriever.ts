@@ -50,16 +50,20 @@ module.exports = function handler(fileData, logger) {
 		});
 
 	for (const job of parsedJobs) {
+		if (job.stageName === "runAfterAll") {
+			continue;
+		}
 		// we only need .js files
 		logger.send({
 			category: "performance",
 			eventName: "StageTiming",
 			benchmarkType: "PipelineInfo",
-			name: job.stageName,
+			stageName: job.stageName,
 			duration: job.totalTime,
 			state: job.state,
 			result: job.result,
 			buildId: process.env.BUILD_ID ?? "",
+			name: process.env.PIPELINE ?? "",
 		});
 	}
 };
