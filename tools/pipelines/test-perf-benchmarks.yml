@@ -72,6 +72,8 @@ variables:
   - name: toolStageRetrieverPath
     value: $(Build.SourcesDirectory)/tools/stagetiming-retriever
     readonly: true
+  - name: previous_stages
+    value: ${{ variables.stages[0:len(variables.stages)-1] }}
   - group: prague-key-vault
 
 lockBehavior: sequential
@@ -615,17 +617,14 @@ stages:
                 echo "Cleanup  ${{ variables.memoryUsageTestOutputFolder }}"
                 rm -rf ${{ variables.memoryUsageTestOutputFolder }};
 
-  - stage: runLast
+  - stage: runAfterAll
     condition: always()
     dependsOn:
-      - perf_unit_tests_runtime
-      - perf_unit_tests_memory
-      - perf_e2e_tests_local
-      - perf_e2e_tests_odsp
-      - perf_e2e_tests_frs
+      - ${{ each stage in variables.previous_stages }}:
+        - ${{ stage }}
 
     jobs:
-      - job: uploadTiming1
+      - job: uploadTimingLast
         displayName: Upload Timing
         steps:
 
@@ -635,12 +634,18 @@ stages:
             targetType: 'inline'
             workingDirectory: $(toolAbsolutePath)
             script: |
-              echo "Getting BuildId ..."
+              echo "Executing curl command ..."
+              echo  'curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline"'
+              curl -u ":$(System.AccessToken)" "https://dev.azure.com/fluidframework/internal/_apis/build/builds/$(Build.BuildId)/timeline\?api-version\=6.0-preview.1" > output.json 2> /dev/nul
+              pwd;
+              ls -laR ./output.json;
+              cat ./output.json;
+              node --require @ff-internal/aria-logger bin/run --handlerModule $(Build.SourcesDirectory)/tools/telemetry-generator/dist/handlers/stageTimingRetriever.js --dir './';
           env:
             BUILD_ID: $(Build.BuildId)
             ADO_API_TOKEN: $(System.AccessToken)
 
-  - stage: runAfterAll
+  - stage: runAfterUnitTestsRuntime
     condition: always()
     dependsOn:
       - perf_unit_tests_runtime

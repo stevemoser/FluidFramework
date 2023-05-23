@@ -18,6 +18,11 @@ module.exports = function handler(fileData, logger) {
 	if (fileData.records?.length === undefined || fileData.records?.length === 0) {
 		console.log(`could not locate records info`);
 	}
+	if (process.env.BUILD_ID !== undefined) {
+		console.log("BUILD_ID", process.env.BUILD_ID);
+	} else {
+		console.log("BUILD_ID not defined.");
+	}
 
 	const parsedJobs: ParsedJob[] = fileData.records
 		.filter((job) => job.type === "Stage")
@@ -54,6 +59,7 @@ module.exports = function handler(fileData, logger) {
 			duration: job.totalTime,
 			state: job.state,
 			result: job.result,
+			buildId: process.env.BUILD_ID ?? "",
 		});
 	}
 };
